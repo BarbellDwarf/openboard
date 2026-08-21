@@ -1,5 +1,5 @@
 {
-	"id": "738a9cf1-d9c9-42df-a0ef-cc15f71061ba",
+	"id": "1a2870dc-9d2b-44cf-9ff9-2135cdd737c2",
 	"prevId": "00000000-0000-0000-0000-000000000000",
 	"version": "7",
 	"dialect": "postgresql",
@@ -778,17 +778,79 @@
 					"primaryKey": false,
 					"notNull": true
 				},
-				"provider": {
-					"name": "provider",
+				"account_id": {
+					"name": "account_id",
 					"type": "text",
 					"primaryKey": false,
 					"notNull": true
 				},
-				"provider_account_id": {
-					"name": "provider_account_id",
+				"provider_id": {
+					"name": "provider_id",
 					"type": "text",
 					"primaryKey": false,
 					"notNull": true
+				},
+				"issuer": {
+					"name": "issuer",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"access_token": {
+					"name": "access_token",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"refresh_token": {
+					"name": "refresh_token",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"id_token": {
+					"name": "id_token",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"access_token_expires_at": {
+					"name": "access_token_expires_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"refresh_token_expires_at": {
+					"name": "refresh_token_expires_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"scope": {
+					"name": "scope",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"password": {
+					"name": "password",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
 				}
 			},
 			"indexes": {
@@ -796,13 +858,13 @@
 					"name": "oauth_provider_account_key",
 					"columns": [
 						{
-							"expression": "provider",
+							"expression": "provider_id",
 							"isExpression": false,
 							"asc": true,
 							"nulls": "last"
 						},
 						{
-							"expression": "provider_account_id",
+							"expression": "account_id",
 							"isExpression": false,
 							"asc": true,
 							"nulls": "last"
@@ -1236,6 +1298,12 @@
 					"primaryKey": false,
 					"notNull": true
 				},
+				"token": {
+					"name": "token",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true
+				},
 				"expires_at": {
 					"name": "expires_at",
 					"type": "timestamp with time zone",
@@ -1244,6 +1312,13 @@
 				},
 				"created_at": {
 					"name": "created_at",
+					"type": "timestamp with time zone",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "now()"
+				},
+				"updated_at": {
+					"name": "updated_at",
 					"type": "timestamp with time zone",
 					"primaryKey": false,
 					"notNull": true,
@@ -1274,6 +1349,21 @@
 						}
 					],
 					"isUnique": false,
+					"concurrently": false,
+					"method": "btree",
+					"with": {}
+				},
+				"sessions_token_key": {
+					"name": "sessions_token_key",
+					"columns": [
+						{
+							"expression": "token",
+							"isExpression": false,
+							"asc": true,
+							"nulls": "last"
+						}
+					],
+					"isUnique": true,
 					"concurrently": false,
 					"method": "btree",
 					"with": {}

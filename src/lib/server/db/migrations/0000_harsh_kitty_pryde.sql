@@ -81,8 +81,18 @@ CREATE TABLE "notifications" (
 CREATE TABLE "oauth_accounts" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
-	"provider" text NOT NULL,
-	"provider_account_id" text NOT NULL
+	"account_id" text NOT NULL,
+	"provider_id" text NOT NULL,
+	"issuer" text,
+	"access_token" text,
+	"refresh_token" text,
+	"id_token" text,
+	"access_token_expires_at" timestamp with time zone,
+	"refresh_token_expires_at" timestamp with time zone,
+	"scope" text,
+	"password" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "preferences" (
@@ -132,8 +142,10 @@ CREATE TABLE "ratings" (
 CREATE TABLE "sessions" (
 	"id" text PRIMARY KEY NOT NULL,
 	"user_id" uuid NOT NULL,
+	"token" text NOT NULL,
 	"expires_at" timestamp with time zone NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"ip_address" text,
 	"user_agent" text
 );
@@ -174,11 +186,12 @@ CREATE INDEX "games_black_idx" ON "games" USING btree ("black_id","status");--> 
 CREATE INDEX "games_status_created_idx" ON "games" USING btree ("status","created_at");--> statement-breakpoint
 CREATE UNIQUE INDEX "moves_game_ply_key" ON "moves" USING btree ("game_id","ply");--> statement-breakpoint
 CREATE INDEX "notifications_user_unread_idx" ON "notifications" USING btree ("user_id","read_at");--> statement-breakpoint
-CREATE UNIQUE INDEX "oauth_provider_account_key" ON "oauth_accounts" USING btree ("provider","provider_account_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "oauth_provider_account_key" ON "oauth_accounts" USING btree ("provider_id","account_id");--> statement-breakpoint
 CREATE INDEX "oauth_user_id_idx" ON "oauth_accounts" USING btree ("user_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "push_subscriptions_endpoint_key" ON "push_subscriptions" USING btree ("endpoint");--> statement-breakpoint
 CREATE UNIQUE INDEX "ratings_player_variant_speed_key" ON "ratings" USING btree ("user_id","variant","speed_class");--> statement-breakpoint
 CREATE INDEX "ratings_leaderboard_idx" ON "ratings" USING btree ("variant","speed_class","rating");--> statement-breakpoint
 CREATE INDEX "sessions_user_id_idx" ON "sessions" USING btree ("user_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "sessions_token_key" ON "sessions" USING btree ("token");--> statement-breakpoint
 CREATE UNIQUE INDEX "users_name_key" ON "users" USING btree ("name");--> statement-breakpoint
 CREATE UNIQUE INDEX "users_email_key" ON "users" USING btree ("email");
