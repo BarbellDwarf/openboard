@@ -1,0 +1,41 @@
+@import '@fontsource/marcellus';
+@import '@fontsource/work-sans/400.css';
+@import '@fontsource/work-sans/500.css';
+@import '@fontsource/work-sans/600.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+
+:root {
+	/* Surfaces */
+	--baize: #0f1b14;
+	--baize-raised: #16241b;
+
+	/* Content */
+	--parchment: #ede4cf;
+	--ink: #211b10;
+
+	/* Wood and accents */
+	--walnut: #6b4a32;
+	--amber: #e8a33d;
+	--amber-deep: #b97b22;
+	--flag-red: #c4432b;
+	--lichen: #7fa65a;
+
+	/* Board squares */
+	--sq-light: #ebd9b4;
+	--sq-dark: #96703f;
+
+	/* Type stacks wired to the @fontsource imports above */
+	--font-display: 'Marcellus', 'Georgia', 'Times New Roman', serif;
+	--font-body: 'Work Sans', system-ui, sans-serif;
+	--font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+body {
+	margin: 0;
+	background-color: var(--baize);
+	color: var(--parchment);
+	font-family: var(--font-body);
+	font-size: 1rem;
+	line-height: 1.5;
+}
