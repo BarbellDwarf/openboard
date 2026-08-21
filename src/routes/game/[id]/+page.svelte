@@ -116,7 +116,10 @@
 
 	onMount(() => {
 		void (async () => {
-			const join: JoinResponse = await gameChannel.join(gameId);
+			const join = await Promise.race([
+				gameChannel.join(gameId),
+				new Promise<JoinResponse>((r) => setTimeout(() => r({ ok: false }), 5000))
+			]);
 			if (!join.ok || !join.game || !join.state) {
 				loadError = true;
 				return;

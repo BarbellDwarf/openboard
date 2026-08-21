@@ -55,11 +55,11 @@ export function injectSocketIO(io: IOServer): void {
 	io.use(async (socket, next) => {
 		try {
 			const session = await getSessionFromCookieHeader(socket.request.headers.cookie);
-			if (!session) return next(new Error('unauthorized'));
-			socket.data.userId = session.userId;
+			socket.data.userId = session?.userId ?? null;
 			next();
 		} catch {
-			next(new Error('unauthorized'));
+			socket.data.userId = null;
+			next();
 		}
 	});
 
@@ -81,7 +81,8 @@ export function injectSocketIO(io: IOServer): void {
 				if (!game) return ack?.({ ok: false });
 				const room = roomFor(gameId);
 				if (game.timeControl.initialMs != null && !room.clock && game.status === 'started') {
-					room.clock = initialClock(game.timeControl, game.lastMoveAtMs);
+					// Resume from now: downtime between restarts must not drain clocks.
+				room.clock = initialClock(game.timeControl, Date.now());
 				}
 				await socket.join(`game:${gameId}`);
 				const color = socket.data.userId ? await playerColorFor(gameId, socket.data.userId) : null;
