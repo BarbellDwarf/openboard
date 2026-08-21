@@ -1,9 +1,16 @@
 <script lang="ts">
 	import '../app.css';
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 
 	let { data, children } = $props();
+
+	onMount(() => {
+		if ('serviceWorker' in navigator) {
+			void navigator.serviceWorker.register('/sw.js').catch(() => undefined);
+		}
+	});
 
 	async function signOut() {
 		await fetch('/logout', { method: 'POST' });

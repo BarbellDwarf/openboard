@@ -2,6 +2,7 @@ import { Cron } from 'croner';
 
 import { eq, isNull, and } from 'drizzle-orm';
 import { db } from '$lib/server/db';
+import { notifyUser } from '$lib/server/notifications';
 import { games } from '$lib/server/db/schema';
 
 /**
@@ -25,12 +26,20 @@ export async function sweepOnce(): Promise<number> {
 		const turn = game.currentXfen?.split(' ')[1];
 		if (elapsed <= deadlineMs) continue;
 		const loser = turn === 'w' ? 'white' : 'black';
-		const result: ResultValue = loser === 'white' ? 'black' : 'white';
-		const termination: Termination = 'timeout';
+		const result = loser === 'white' ? 'black' : 'white';
+		const termination = 'timeout';
 		await db
 			.update(games)
 			.set({ status: 'finished', result, termination, finishedAt: new Date() })
 			.where(eq(games.id, row.id));
+		void notifyUser(row.whiteId ?? '', 'game-result', {
+			body: `Correspondence game decided by flag: ${result} wins.`,
+			url: `/game/${row.id}`
+		});
+		void notifyUser(row.blackId ?? '', 'game-result', {
+			body: `Correspondence game decided by flag: ${result} wins.`,
+			url: `/game/${row.id}`
+		});
 		finalized++;
 	}
 	return finalized;

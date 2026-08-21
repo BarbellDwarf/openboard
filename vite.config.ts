@@ -2,6 +2,7 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vitest/config';
 import type { ViteDevServer } from 'vite';
 import { Server as IOServer } from 'socket.io';
+import { VitePWA } from 'vite-plugin-pwa';
 
 // Dev-mode Socket.IO wiring. Production uses build/realtime.mjs from the
 // custom server; both paths share one gateway module so behavior matches.
@@ -34,7 +35,18 @@ function openboardSocket(): {
 }
 
 export default defineConfig({
-	plugins: [openboardSocket(), sveltekit()],
+	plugins: [
+		openboardSocket(),
+		sveltekit(),
+		VitePWA({
+			strategies: 'injectManifest',
+			srcDir: 'src/service-worker',
+			filename: 'sw.ts',
+			registerType: 'prompt',
+			injectRegister: null,
+			manifest: false
+		})
+	],
 	test: {
 		passWithNoTests: true
 	}

@@ -18,6 +18,7 @@ import {
 } from '../chess/game-service';
 import { getSessionFromCookieHeader } from '../auth/session';
 import { startSweeper } from '../correspondence';
+import { notifyUser } from '../notifications';
 import { addMessage, historyFor } from '../chat';
 
 /**
@@ -223,6 +224,13 @@ export function injectSocketIO(io: IOServer): void {
 			const color = await playerColorFor(gameId, socket.data.userId);
 			if (!color) return;
 			roomFor(gameId).drawOfferedBy = color;
+			const opp =
+				color === 'white' ? (await loadGame(gameId))?.blackId : (await loadGame(gameId))?.whiteId;
+			if (opp)
+				void notifyUser(opp, 'draw-offered', {
+					body: 'Your opponent offers a draw.',
+					url: `/game/${gameId}`
+				});
 			socket.to(`game:${gameId}`).emit('game:draw-offered', { by: color });
 		});
 
