@@ -22,6 +22,9 @@ async function start() {
 	});
 	injectSocketIO(io);
 
+	const { startSweeper } = await import('./build/realtime.mjs');
+	startSweeper();
+
 	httpServer.listen(port, host, () => {
 		console.log(`OpenBoard listening on port ${port}`);
 	});

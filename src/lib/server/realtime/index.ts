@@ -17,6 +17,7 @@ import {
 	playerColorFor
 } from '../chess/game-service';
 import { getSessionFromCookieHeader } from '../auth/session';
+import { startSweeper } from '../correspondence';
 import { addMessage, historyFor } from '../chat';
 
 /**
@@ -269,4 +270,9 @@ export function injectSocketIO(io: IOServer): void {
 			}
 		);
 	});
+}
+
+/** Called by both prod server and dev plugin after io is wired. */
+export function startBackgroundJobs(): void {
+	startSweeper();
 }
