@@ -17,6 +17,7 @@
 		lastMove?: [string, string] | null;
 		checkSquare?: string | null;
 		interactive?: boolean;
+		anyColor?: boolean;
 		coordinates?: boolean;
 		animationMs?: number;
 		boardTheme?: string;
@@ -31,6 +32,7 @@
 		lastMove = null,
 		checkSquare = null,
 		interactive = false,
+		anyColor = false,
 		coordinates = true,
 		animationMs = 180,
 		boardTheme = 'vinyl',
@@ -70,7 +72,7 @@
 			animation: { enabled: !reducedMotion, duration: animationMs },
 			movable: {
 				free: false,
-				color: interactive ? orientation : undefined,
+				color: interactive ? (anyColor ? 'both' : orientation) : undefined,
 				dests: interactive ? toDests(dests) : new Map(),
 				showDests: true,
 				events: {
@@ -131,7 +133,7 @@
 			orientation,
 			coordinates,
 			movable: {
-				color: interactive ? orientation : undefined,
+				color: interactive ? (anyColor ? 'both' : orientation) : undefined,
 				dests: interactive ? toDests(dests) : new Map()
 			},
 			lastMove: (lastMove ?? undefined) as [Key, Key] | undefined,
