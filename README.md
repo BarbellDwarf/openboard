@@ -2,7 +2,7 @@
 
 A self-hostable online chess platform. Live games, long-running correspondence games, rated play with leaderboards, chat, and full support for chess variants. Runs as two Docker containers: one application container plus PostgreSQL.
 
-Status: early development. The feature set below is the target for v0.1.0, tracked on the [issue tracker](https://github.com/BarbellDwarf/openboard/issues).
+v0.1.0 is in final testing. The list below reflects what ships; see the [issue tracker](https://github.com/BarbellDwarf/openboard/issues) for what is next.
 
 ## Why this exists
 
