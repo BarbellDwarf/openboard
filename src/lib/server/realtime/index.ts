@@ -11,6 +11,7 @@ import {
 } from '../chess/clocks';
 import {
 	createGame,
+	completeGame,
 	finishGame,
 	loadGame,
 	persistMove,
@@ -133,7 +134,7 @@ export function injectSocketIO(io: IOServer): void {
 				if (room.clock) {
 					const flagged = flaggedColor(room.clock, nowMs);
 					if (flagged) {
-						await finishGame(gameId, flagged === 'white' ? 'black' : 'white', 'timeout');
+						await completeGame(gameId, flagged === 'white' ? 'black' : 'white', 'timeout');
 						io.to(`game:${gameId}`).emit('game:over', {
 							result: flagged === 'white' ? 'black' : 'white',
 							termination: 'timeout'
@@ -175,7 +176,7 @@ export function injectSocketIO(io: IOServer): void {
 			if (!color) return;
 			const game = await loadGame(gameId);
 			if (!game || game.status !== 'started') return;
-			await finishGame(gameId, color === 'white' ? 'black' : 'white', 'resignation');
+			await completeGame(gameId, color === 'white' ? 'black' : 'white', 'resignation');
 			io.to(`game:${gameId}`).emit('game:over', {
 				result: color === 'white' ? 'black' : 'white',
 				termination: 'resignation'
@@ -196,7 +197,7 @@ export function injectSocketIO(io: IOServer): void {
 			if (!color) return;
 			const game = await loadGame(gameId);
 			if (!game || game.status !== 'started') return;
-			await finishGame(gameId, 'draw', 'agreement');
+			await completeGame(gameId, 'draw', 'agreement');
 			io.to(`game:${gameId}`).emit('game:over', { result: 'draw', termination: 'agreement' });
 		});
 

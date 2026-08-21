@@ -174,6 +174,33 @@ export async function persistMove(gameId: string, uci: string): Promise<MovePers
 	return { applied: true, finished, state: outcome.state, san: outcome.san };
 }
 
+import { applyRatedResult } from '$lib/server/ratings/service';
+import { speedClassFor } from './types';
+
+/** Finish a game and, when rated, apply Glicko-2 updates. */
+export async function completeGame(
+	gameId: string,
+	result: ResultValue,
+	termination: Termination
+): Promise<void> {
+	const [game] = await db.select().from(games).where(eq(games.id, gameId)).limit(1);
+	if (!game || game.status !== 'started') return;
+	await finishGame(gameId, result, termination);
+	if (!game.rated) return;
+	await applyRatedResult({
+		gameId,
+		variant: game.variant as VariantId,
+		speed: speedClassFor({
+			initialMs: game.initialMs,
+			incrementMs: game.incrementMs,
+			daysPerMove: game.daysPerMove
+		}),
+		result,
+		whiteId: game.whiteId,
+		blackId: game.blackId
+	});
+}
+
 export async function finishGame(
 	gameId: string,
 	result: ResultValue,
