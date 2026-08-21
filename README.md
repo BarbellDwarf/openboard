@@ -42,4 +42,4 @@ The application listens on port 3000 by default. Configuration happens through e
 
 ## License
 
-Apache-2.0. Free to run, modify, and self-host. No feature gates.
+GPL-3.0-or-later. Free to run, study, modify, and self-host. The license choice follows from the chess libraries at the core of the project (chessground and chessops), which are GPL licensed. Piece sets and sounds ship under their own permissive licenses, documented in the asset credits.
