@@ -1,7 +1,7 @@
 // Production entry point. Serves the adapter-node build and attaches Socket.IO.
 import http from 'node:http';
 import { Server } from 'socket.io';
-import { injectSocketIO } from './src/lib/server/realtime/index.js';
+import { injectSocketIO } from './build/realtime.mjs';
 import { pool } from './src/lib/server/config/db.js';
 
 const port = Number(process.env.PORT ?? 3000);
@@ -17,7 +17,9 @@ async function start() {
 	}
 
 	const httpServer = http.createServer(handler);
-	const io = new Server(httpServer);
+	const io = new Server(httpServer, {
+		connectionStateRecovery: { maxDisconnectionDuration: 60_000 }
+	});
 	injectSocketIO(io);
 
 	httpServer.listen(port, host, () => {

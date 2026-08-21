@@ -33,6 +33,7 @@ export function oidcProvidersFromEnv(): OidcProviderConfig[] {
 }
 
 export const auth = betterAuth({
+	secret: process.env.BETTER_AUTH_SECRET ?? 'openboard-dev-secret-do-not-use-in-production',
 	baseURL: process.env.ORIGIN ?? process.env.BETTER_AUTH_URL,
 	database: drizzleAdapter(db, {
 		provider: 'pg',

@@ -10,7 +10,7 @@
 	},
 	"scripts": {
 		"dev": "vite dev",
-		"build": "vite build",
+		"build": "vite build && node scripts/build-realtime.js",
 		"preview": "vite preview",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"lint": "prettier --check . && eslint .",
@@ -57,6 +57,7 @@
 		"typescript-eslint": "^8.67.0",
 		"vite": "^8.2.2",
 		"vite-plugin-pwa": "^1.3.0",
-		"vitest": "^4.1.11"
+		"vitest": "^4.1.11",
+		"esbuild": "^0.28.2"
 	}
 }

@@ -53,6 +53,14 @@ const OIDC_KEYS = [
 	'OIDC_PROVIDER_NAME'
 ] as const;
 
+if (
+	process.env.NODE_ENV === 'production' &&
+	!process.env.BETTER_AUTH_SECRET &&
+	!process.env.BUILDING
+) {
+	throw new Error('Missing environment variable: BETTER_AUTH_SECRET');
+}
+
 validateGroup('Web Push (VAPID)', VAPID_KEYS);
 validateGroup('OIDC', OIDC_KEYS);
 
