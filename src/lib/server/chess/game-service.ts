@@ -3,12 +3,7 @@ import { asc, eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { games, moves as movesTable, users } from '$lib/server/db/schema';
 
-import {
-	applyMove,
-	drawByFiftyMoves,
-	drawByRepetition,
-	startPosition
-} from './engine';
+import { applyMove, drawByFiftyMoves, drawByRepetition, startPosition } from './engine';
 import { buildPgn } from './pgn';
 import type {
 	Color,
@@ -107,17 +102,19 @@ export async function loadGame(gameId: string): Promise<LoadedGame | null> {
 
 export interface MovePersistenceResult {
 	applied: boolean;
-	reason?: 'game-not-found' | 'game-not-started' | 'illegal-move' | 'invalid-move-format' | 'invalid-position';
+	reason?:
+		| 'game-not-found'
+		| 'game-not-started'
+		| 'illegal-move'
+		| 'invalid-move-format'
+		| 'invalid-position';
 	finished?: { result: ResultValue; termination: Termination } | null;
 	state?: EngineState;
 	san?: string;
 }
 
 /** Apply and persist a move in one transaction, including draw detection. */
-export async function persistMove(
-	gameId: string,
-	uci: string
-): Promise<MovePersistenceResult> {
+export async function persistMove(gameId: string, uci: string): Promise<MovePersistenceResult> {
 	const loaded = await loadGame(gameId);
 	if (!loaded) return { applied: false, reason: 'game-not-found' };
 	if (loaded.status !== 'started') return { applied: false, reason: 'game-not-started' };
@@ -129,7 +126,8 @@ export async function persistMove(
 	if (!outcome.ok) return { applied: false, reason: outcome.error };
 
 	let finished: { result: ResultValue; termination: Termination } | null = outcome.finished;
-	if (!finished && drawByRepetition(history)) finished = { result: 'draw', termination: 'repetition' };
+	if (!finished && drawByRepetition(history))
+		finished = { result: 'draw', termination: 'repetition' };
 	if (!finished && drawByFiftyMoves(outcome.state.xfen)) {
 		finished = { result: 'draw', termination: 'fifty-moves' };
 	}
@@ -188,7 +186,10 @@ export async function finishGame(
 }
 
 export async function abortGame(gameId: string): Promise<void> {
-	await db.update(games).set({ status: 'aborted', finishedAt: new Date() }).where(eq(games.id, gameId));
+	await db
+		.update(games)
+		.set({ status: 'aborted', finishedAt: new Date() })
+		.where(eq(games.id, gameId));
 }
 
 async function moveHistoryXfens(gameId: string): Promise<string[]> {
@@ -217,6 +218,10 @@ export async function playerColorFor(gameId: string, userId: string): Promise<Co
 
 export async function playerName(userId: string | null): Promise<string> {
 	if (!userId) return 'Anonymous';
-	const [row] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId)).limit(1);
+	const [row] = await db
+		.select({ name: users.name })
+		.from(users)
+		.where(eq(users.id, userId))
+		.limit(1);
 	return row?.name ?? 'Anonymous';
 }

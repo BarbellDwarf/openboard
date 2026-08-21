@@ -10,7 +10,13 @@ import {
 	loadPosition,
 	startPosition
 } from './engine';
-import { initialClock, applyMoveToClock, flaggedColor, remainingFor, correspondenceDeadline } from './clocks';
+import {
+	initialClock,
+	applyMoveToClock,
+	flaggedColor,
+	remainingFor,
+	correspondenceDeadline
+} from './clocks';
 import { buildPgn, sanMovesFromMovetext } from './pgn';
 import { VARIANTS } from './types';
 

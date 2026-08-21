@@ -63,10 +63,7 @@ export function flaggedColor(clock: LiveClock, nowMs: number): Color | null {
 }
 
 /** Correspondence deadline for the side to move. */
-export function correspondenceDeadline(
-	daysPerMove: number,
-	lastMoveAtMs: number
-): number {
+export function correspondenceDeadline(daysPerMove: number, lastMoveAtMs: number): number {
 	return lastMoveAtMs + daysPerMove * 24 * 60 * 60 * 1000;
 }
 

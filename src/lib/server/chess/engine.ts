@@ -3,7 +3,8 @@ import { normalizeMove } from 'chessops/chess';
 import { parseFen, makeFen } from 'chessops/fen';
 import { makeSanAndPlay } from 'chessops/san';
 import { defaultPosition, setupPosition } from 'chessops/variant';
-import { makeSquare, parseUci } from 'chessops';
+import { isDrop, makeSquare, parseUci } from 'chessops';
+import type { Move } from 'chessops/types';
 import type { Position } from 'chessops/chess';
 import type { Rules } from 'chessops/types';
 
@@ -34,6 +35,8 @@ function rulesFor(variant: VariantId): Rules {
 			return lichessRules('kingOfTheHill');
 		case 'threecheck':
 			return lichessRules('threeCheck');
+		case 'racingkings':
+			return lichessRules('racingKings');
 		default:
 			return lichessRules(variant);
 	}
@@ -59,7 +62,10 @@ export function stateFromPosition(pos: Position, variant: VariantId): EngineStat
 		state.pockets = countPockets(pos.pockets);
 	}
 	if (variant === 'threecheck' && pos.remainingChecks) {
-		state.checkCount = { white: 3 - pos.remainingChecks.white, black: 3 - pos.remainingChecks.black };
+		state.checkCount = {
+			white: 3 - pos.remainingChecks.white,
+			black: 3 - pos.remainingChecks.black
+		};
 	}
 	return state;
 }
@@ -68,6 +74,15 @@ function destsFor(pos: Position, variant: VariantId): DestMap {
 	const map = chessgroundDests(pos, { chess960: isChess960(variant) });
 	const out: DestMap = {};
 	for (const [from, tos] of map.entries()) out[from] = [...tos];
+	if (pos.rules === 'crazyhouse' && pos.dropDests) {
+		const dropSquares = [...pos.dropDests()];
+		for (const [role, letter] of Object.entries(ROLE_LETTERS)) {
+			if (role === 'king') continue;
+			let squares = dropSquares;
+			if (role === 'pawn') squares = squares.filter((sq) => sq >= 8 && sq <= 55);
+			if (squares.length > 0) out[`drop:${letter}`] = squares.map(makeSquare);
+		}
+	}
 	return out;
 }
 
@@ -96,11 +111,7 @@ export function startPosition(variant: VariantId): EngineState {
 	return stateFromPosition(loadPosition(variant), variant);
 }
 
-export function applyMove(
-	variant: VariantId,
-	xfen: string,
-	uci: string
-): ApplyMoveResult {
+export function applyMove(variant: VariantId, xfen: string, uci: string): ApplyMoveResult {
 	let pos: Position;
 	try {
 		pos = loadPosition(variant, xfen);
@@ -126,18 +137,22 @@ export function applyMove(
 	};
 }
 
-function isLegalByName(
-	pos: Position,
-	variant: VariantId,
-	move: { from: number; to: number }
-): boolean {
+function isLegalByName(pos: Position, variant: VariantId, move: Move): boolean {
+	if (isDrop(move)) {
+		if (pos.rules !== 'crazyhouse') return false;
+		let ok = pos.dropDests().has(move.to);
+		if (ok && move.role === 'pawn') ok = move.to >= 8 && move.to <= 55;
+		return ok;
+	}
 	const from = makeSquare(move.from);
 	const to = makeSquare(move.to);
 	const dests = chessgroundDests(pos, { chess960: isChess960(variant) }).get(from);
 	return dests !== undefined && dests.includes(to);
 }
 
-export function detectFinish(pos: Position): { result: ResultValue; termination: Termination } | null {
+export function detectFinish(
+	pos: Position
+): { result: ResultValue; termination: Termination } | null {
 	if (pos.isVariantEnd?.()) {
 		const outcome = pos.variantOutcome();
 		return { result: outcomeToResult(outcome), termination: variantTermination(pos) };
@@ -165,7 +180,9 @@ function variantTermination(pos: Position): Termination {
 	}
 }
 
-function outcomeToResult(outcome: { winner: 'white' | 'black' | undefined } | undefined): ResultValue {
+function outcomeToResult(
+	outcome: { winner: 'white' | 'black' | undefined } | undefined
+): ResultValue {
 	if (!outcome || outcome.winner === undefined) return 'draw';
 	return outcome.winner;
 }
