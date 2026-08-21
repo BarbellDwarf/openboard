@@ -44,7 +44,6 @@ export default defineConfig({
 			filename: 'sw.ts',
 			registerType: 'prompt',
 			injectRegister: null,
-			manifest: false
 		})
 	],
 	test: {
