@@ -12,7 +12,6 @@ import {
 import {
 	createGame,
 	completeGame,
-	finishGame,
 	loadGame,
 	persistMove,
 	playerColorFor
