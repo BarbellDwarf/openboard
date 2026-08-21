@@ -96,7 +96,7 @@ export const preferences = pgTable('preferences', {
 		.references(() => users.id, { onDelete: 'cascade' }),
 	boardTheme: text('board_theme').default('vinyl').notNull(),
 	pieceSet: text('piece_set').default('cburnett').notNull(),
-	soundPack: text('sound_pack').default('kenney').notNull(),
+	soundPack: text('sound_pack').default('openboard').notNull(),
 	soundVolume: integer('sound_volume').default(70).notNull(),
 	animations: boolean('animations').default(true).notNull(),
 	coordinates: boolean('coordinates').default(true).notNull(),

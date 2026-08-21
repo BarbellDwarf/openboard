@@ -99,7 +99,7 @@ CREATE TABLE "preferences" (
 	"user_id" uuid PRIMARY KEY NOT NULL,
 	"board_theme" text DEFAULT 'vinyl' NOT NULL,
 	"piece_set" text DEFAULT 'cburnett' NOT NULL,
-	"sound_pack" text DEFAULT 'kenney' NOT NULL,
+	"sound_pack" text DEFAULT 'openboard' NOT NULL,
 	"sound_volume" integer DEFAULT 70 NOT NULL,
 	"animations" boolean DEFAULT true NOT NULL,
 	"coordinates" boolean DEFAULT true NOT NULL,
