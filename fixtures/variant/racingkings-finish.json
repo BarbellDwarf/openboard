@@ -1,0 +1,13 @@
+{
+	"name": "racing kings: reaching rank eight first wins",
+	"variant": "racingkings",
+	"xfen": "8/7K/8/8/8/8/8/k7 w - - 0 1",
+	"uci": "h7h8",
+	"expect": {
+		"ok": true,
+		"finished": {
+			"result": "white",
+			"termination": "racingkings-finish"
+		}
+	}
+}

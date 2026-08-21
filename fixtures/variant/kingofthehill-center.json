@@ -1,0 +1,9 @@
+{
+	"name": "king of the hill: king reaching the center ends the game",
+	"variant": "kingofthehill",
+	"xfen": "rnbqkbnr/pppp1ppp/8/4p3/4K3/8/PPPP1PPP/RNBQ1BNR w - - 0 1",
+	"uci": null,
+	"expect": {
+		"finishedByLoading": { "result": "white", "termination": "kingofthehill" }
+	}
+}
