@@ -17,6 +17,7 @@ import {
 	playerColorFor
 } from '../chess/game-service';
 import { getSessionFromCookieHeader } from '../auth/session';
+import { addMessage, historyFor } from '../chat';
 
 /**
  * Realtime gateway. One Socket.IO room per game; every state change is
@@ -56,6 +57,10 @@ export function injectSocketIO(io: IOServer): void {
 		try {
 			const session = await getSessionFromCookieHeader(socket.request.headers.cookie);
 			socket.data.userId = session?.userId ?? null;
+			if (session) {
+				const { playerName } = await import('../chess/game-service');
+				socket.data.userName = await playerName(session.userId);
+			}
 			next();
 		} catch {
 			socket.data.userId = null;
@@ -167,6 +172,35 @@ export function injectSocketIO(io: IOServer): void {
 					io.to(`game:${gameId}`).emit('game:over', result.finished);
 				}
 				ack?.({ ok: true });
+			}
+		);
+
+		const chatTimes: number[] = [];
+		socket.on(
+			'game:chat-send',
+			async ({ gameId, body }: { gameId: string; body: string }, ack?: (r: unknown) => void) => {
+				if (!socket.data.userId || !body?.trim()) return ack?.({ ok: false });
+				const now = Date.now();
+				while (chatTimes.length > 0 && now - chatTimes[0] > 10_000) chatTimes.shift();
+				if (chatTimes.length >= 5) return ack?.({ ok: false, reason: 'rate-limited' });
+				chatTimes.push(now);
+				const text = body.slice(0, 500).trim();
+				const id = await addMessage(gameId, socket.data.userId, text);
+				io.to(`game:${gameId}`).emit('game:chat', {
+					id,
+					userId: socket.data.userId,
+					name: socket.data.userName ?? '',
+					body: text,
+					createdAt: Date.now()
+				});
+				ack?.({ ok: true, id });
+			}
+		);
+
+		socket.on(
+			'game:chat-history',
+			async ({ gameId }: { gameId: string }, ack?: (r: unknown) => void) => {
+				ack?.({ messages: await historyFor(gameId) });
 			}
 		);
 

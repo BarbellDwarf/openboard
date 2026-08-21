@@ -3,6 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import Board from '$lib/components/board/Board.svelte';
+	import ChatPanel from '$lib/components/chat/ChatPanel.svelte';
 	import { gameChannel, getSocket, type JoinResponse } from '$lib/client/socket';
 	import type { DestMap } from '$lib/server/chess/types';
 
@@ -280,6 +281,8 @@
 				{/if}
 			</div>
 
+			<h2>Chat</h2>
+			<ChatPanel {gameId} />
 			<p class="sr-only" role="status" aria-live="polite">{announcement}</p>
 			{#if isSpectator && info.status === 'started'}
 				<p class="muted spectator-note">You are watching this game.</p>

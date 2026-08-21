@@ -2,6 +2,10 @@
 import type { Session, User } from 'better-auth';
 
 declare global {
+	interface SocketData {
+		userId?: string;
+		userName?: string;
+	}
 	namespace App {
 		interface Locals {
 			session: Session | null;
