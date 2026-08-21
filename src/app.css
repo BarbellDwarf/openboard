@@ -39,3 +39,50 @@ body {
 	font-size: 1rem;
 	line-height: 1.5;
 }
+
+/* Chessboard themes and piece sets (global: targets chessground-created DOM) */
+.ob-board-wrap.theme-vinyl cg-board {
+	background: conic-gradient(
+			var(--sq-light) 0 25%,
+			var(--sq-dark) 0 50%,
+			var(--sq-light) 0 75%,
+			var(--sq-dark) 0
+		)
+		0 0 / 25% 25%;
+}
+.ob-board-wrap.theme-slate cg-board {
+	background: conic-gradient(#cfd8dc 0 25%, #546e7a 0 50%, #cfd8dc 0 75%, #546e7a 0) 0 0 / 25% 25%;
+}
+.ob-board-wrap.theme-cherry cg-board {
+	background: conic-gradient(#f3d9c0 0 25%, #a34a32 0 50%, #f3d9c0 0 75%, #a34a32 0) 0 0 / 25% 25%;
+}
+.ob-board-wrap.theme-marble cg-board {
+	background: conic-gradient(#f5f5f5 0 25%, #7d8896 0 50%, #f5f5f5 0 75%, #7d8896 0) 0 0 / 25% 25%;
+}
+.ob-board-wrap.theme-contrast cg-board {
+	background: conic-gradient(#ffffff 0 25%, #212121 0 50%, #ffffff 0 75%, #212121 0) 0 0 / 25% 25%;
+}
+.pc-pw.pc-q {
+	background-image: url('/pieces/cburnett/wQ.svg');
+}
+.pc-pw.pc-r {
+	background-image: url('/pieces/cburnett/wR.svg');
+}
+.pc-pw.pc-b {
+	background-image: url('/pieces/cburnett/wB.svg');
+}
+.pc-pw.pc-n {
+	background-image: url('/pieces/cburnett/wN.svg');
+}
+.pc-pb.pc-q {
+	background-image: url('/pieces/cburnett/bQ.svg');
+}
+.pc-pb.pc-r {
+	background-image: url('/pieces/cburnett/bR.svg');
+}
+.pc-pb.pc-b {
+	background-image: url('/pieces/cburnett/bB.svg');
+}
+.pc-pb.pc-n {
+	background-image: url('/pieces/cburnett/bN.svg');
+}

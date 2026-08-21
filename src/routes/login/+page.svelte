@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { authClient, oidcProviderId } from '$lib/client/auth';
 
 	import type { PageData } from './$types';
@@ -25,6 +26,7 @@
 			error = result.error.message ?? 'Sign-in failed. Check your email and password.';
 			return;
 		}
+		// eslint-disable-next-line svelte/no-navigation-without-resolve
 		goto(data.returnTo);
 	}
 
@@ -72,7 +74,7 @@
 	{/if}
 
 	<p class="switch">
-		New here? <a href="/register">Create an account</a>
+		New here? <a href={resolve('/register')}>Create an account</a>
 	</p>
 </main>
 

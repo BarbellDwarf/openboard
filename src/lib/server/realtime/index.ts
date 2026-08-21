@@ -42,17 +42,6 @@ function roomFor(gameId: string): RoomState {
 	return room;
 }
 
-function parseCookies(header: string | undefined): Record<string, string> {
-	const out: Record<string, string> = {};
-	if (!header) return out;
-	for (const part of header.split(';')) {
-		const idx = part.indexOf('=');
-		if (idx === -1) continue;
-		out[part.slice(0, idx).trim()] = decodeURIComponent(part.slice(idx + 1).trim());
-	}
-	return out;
-}
-
 function clockView(room: RoomState, nowMs: number) {
 	if (!room.clock) return null;
 	return {
@@ -85,43 +74,49 @@ export function injectSocketIO(io: IOServer): void {
 			return false;
 		}
 
-		socket.on('game:join', async ({ gameId }: { gameId: string }, ack?: Function) => {
-			const game = await loadGame(gameId);
-			if (!game) return ack?.({ ok: false });
-			const room = roomFor(gameId);
-			if (game.timeControl.initialMs != null && !room.clock && game.status === 'started') {
-				room.clock = initialClock(game.timeControl, game.lastMoveAtMs);
+		socket.on(
+			'game:join',
+			async ({ gameId }: { gameId: string }, ack?: (response: unknown) => void) => {
+				const game = await loadGame(gameId);
+				if (!game) return ack?.({ ok: false });
+				const room = roomFor(gameId);
+				if (game.timeControl.initialMs != null && !room.clock && game.status === 'started') {
+					room.clock = initialClock(game.timeControl, game.lastMoveAtMs);
+				}
+				await socket.join(`game:${gameId}`);
+				const color = socket.data.userId ? await playerColorFor(gameId, socket.data.userId) : null;
+				const deadline =
+					game.timeControl.daysPerMove != null
+						? correspondenceDeadline(game.timeControl.daysPerMove, game.lastMoveAtMs)
+						: null;
+				ack?.({
+					ok: true,
+					game: {
+						id: game.id,
+						variant: game.variant,
+						rated: game.rated,
+						status: game.status,
+						result: game.result,
+						termination: game.termination,
+						timeControl: game.timeControl,
+						whiteId: game.whiteId,
+						blackId: game.blackId,
+						yourColor: color
+					},
+					state: game.state,
+					sanMoves: game.sanMoves,
+					clock: clockView(room, Date.now()),
+					deadline
+				});
 			}
-			await socket.join(`game:${gameId}`);
-			const color = socket.data.userId ? await playerColorFor(gameId, socket.data.userId) : null;
-			const deadline =
-				game.timeControl.daysPerMove != null
-					? correspondenceDeadline(game.timeControl.daysPerMove, game.lastMoveAtMs)
-					: null;
-			ack?.({
-				ok: true,
-				game: {
-					id: game.id,
-					variant: game.variant,
-					rated: game.rated,
-					status: game.status,
-					result: game.result,
-					termination: game.termination,
-					timeControl: game.timeControl,
-					whiteId: game.whiteId,
-					blackId: game.blackId,
-					yourColor: color
-				},
-				state: game.state,
-				sanMoves: game.sanMoves,
-				clock: clockView(room, Date.now()),
-				deadline
-			});
-		});
+		);
 
 		socket.on(
 			'game:move',
-			async ({ gameId, uci }: { gameId: string; uci: string }, ack?: Function) => {
+			async (
+				{ gameId, uci }: { gameId: string; uci: string },
+				ack?: (response: unknown) => void
+			) => {
 				if (!socket.data.userId) return ack?.({ ok: false, reason: 'unauthorized' });
 				if (rateLimited()) return ack?.({ ok: false, reason: 'rate-limited' });
 
