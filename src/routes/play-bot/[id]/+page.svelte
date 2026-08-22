@@ -108,24 +108,30 @@
 	}
 
 	async function maybeBotReply(): Promise<void> {
-		if (over) return;
+		if (over || !info) return;
 		const turn = xfen.split(' ')[1];
-		const seatEmpty = info?.whiteId === null || info?.blackId === null;
-		if (!seatEmpty || !info) return;
+		const seatEmpty = info.whiteId === null || info.blackId === null;
+		if (!seatEmpty) return;
+		const theirTurnNow =
+			(turn === 'w' && info.whiteId === null) || (turn === 'b' && info.blackId === null);
+		if (!theirTurnNow) return;
 		botThinking = true;
-		const [uci] = await Promise.all([
-			new Promise<string | null>((resolvePromise) => {
+		try {
+			const uci = await new Promise<string | null>((resolvePromise) => {
 				setTimeout(
 					() => resolvePromise(chooseBotMove(info?.variant ?? 'standard', xfen, urlLevel)),
 					50
 				);
-			}),
-			new Promise((r) => setTimeout(r, 400 + Math.random() * 800))
-		]);
-		botThinking = false;
-		const stillTheirTurn =
-			(turn === 'w' && info.whiteId === null) || (turn === 'b' && info.blackId === null);
-		if (uci && stillTheirTurn) await gameChannel.move(gameId, uci);
+			});
+			await new Promise((r) => setTimeout(r, 400 + Math.random() * 800));
+			const stillTheirTurn =
+				(turn === 'w' && info?.whiteId === null) || (turn === 'b' && info?.blackId === null);
+			if (uci && stillTheirTurn && !over) await gameChannel.move(gameId, uci);
+		} catch {
+			// A search failure must not wedge the page; the human can keep playing.
+		} finally {
+			botThinking = false;
+		}
 	}
 
 	onMount(() => {
