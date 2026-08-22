@@ -199,9 +199,10 @@ export async function completeGame(
 	const [game] = await db.select().from(games).where(eq(games.id, gameId)).limit(1);
 	if (!game || game.status !== 'started') return;
 	// Optimistic guard: bail when the game moved after the caller looked.
+	const guardMs = opts?.onlyIfLastMoveAt?.getTime();
 	if (
-		opts?.onlyIfLastMoveAt &&
-		new Date(game.lastMoveAt).getTime() !== opts.onlyIfLastMoveAt.getTime()
+		guardMs !== undefined &&
+		(game.lastMoveAt ? new Date(game.lastMoveAt).getTime() : null) !== guardMs
 	) {
 		return;
 	}
