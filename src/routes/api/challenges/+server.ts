@@ -36,7 +36,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	}
 
 	if (body.action === 'create') {
-		const id = await createChallenge({
+		const created = await createChallenge({
 			userId: locals.user.id,
 			variant,
 			speedClass: speed,
@@ -44,7 +44,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			colorChoice: (body.colorChoice as 'random' | 'white' | 'black') ?? 'random',
 			days: body.days
 		});
-		return json({ ok: true, challengeId: id });
+		return json({ ok: true, challengeId: created.id, challengeToken: created.token });
 	}
 
 	if (body.action === 'accept' && body.challengeId) {
