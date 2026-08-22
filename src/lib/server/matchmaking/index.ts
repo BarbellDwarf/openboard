@@ -3,7 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { and, eq, gt } from 'drizzle-orm';
 
 import { db } from '$lib/server/db';
-import { challenges, games, gamePlayers } from '$lib/server/db/schema';
+import { challenges, games, gamePlayers, ratings } from '$lib/server/db/schema';
 import { createGame } from '$lib/server/chess/game-service';
 import { notifyUser } from '$lib/server/notifications';
 import type { Color, SpeedClass, VariantId } from '$lib/server/chess/types';
@@ -80,11 +80,13 @@ export async function acceptChallenge(
 	challengeId: string,
 	userId: string
 ): Promise<{ ok: boolean; gameId?: string }> {
-	const [challenge] = await db
-		.select()
-		.from(challenges)
+	// Claim the challenge atomically: only one accepter can flip status.
+	const claimed = await db
+		.update(challenges)
+		.set({ status: 'accepted' })
 		.where(and(eq(challenges.id, challengeId), eq(challenges.status, 'open')))
-		.limit(1);
+		.returning();
+	const challenge = claimed[0];
 	if (!challenge) return { ok: false };
 	if (challenge.challengerId === userId) return { ok: false };
 
@@ -117,10 +119,7 @@ export async function acceptChallenge(
 		blackId
 	});
 
-	await db
-		.update(challenges)
-		.set({ status: 'accepted', gameId })
-		.where(eq(challenges.id, challengeId));
+	await db.update(challenges).set({ gameId }).where(eq(challenges.id, challengeId));
 	if (challenge.challengerId) {
 		void notifyUser(challenge.challengerId, 'challenge-accepted', {
 			body: 'Your challenge was accepted.',
@@ -141,10 +140,44 @@ export async function acceptChallenge(
 	return { ok: true, gameId };
 }
 
-interface PoolEntry {
+export interface PoolEntry {
 	userId: string;
 	speedClass: LobbySpeed;
+	variant: VariantId;
+	rated: boolean;
 	since: number;
+}
+
+const BASE_BAND = 100;
+const BAND_STEP_MS = 5_000;
+const BAND_STEP = 100;
+const MAX_BAND = 800;
+
+/** Widening search band: 100 at join, +100 every 5 s, capped at 800. */
+export function bandFor(waitedMs: number): number {
+	return Math.min(
+		BASE_BAND + Math.floor(Math.max(0, waitedMs) / BAND_STEP_MS) * BAND_STEP,
+		MAX_BAND
+	);
+}
+
+/**
+ * Pure pairing decision so the rules stay unit-testable: identical speed,
+ * variant and rated flag, plus a rating gap inside the waiting side's
+ * (widening) band. Missing ratings count as the 1500 starting rating.
+ */
+export function pairCompatible(
+	entry: PoolEntry,
+	incoming: { speedClass: LobbySpeed; variant: VariantId; rated: boolean },
+	ratingOf: (who: 'entry' | 'incoming') => number | null,
+	nowMs: number
+): boolean {
+	if (entry.speedClass !== incoming.speedClass) return false;
+	if (entry.variant !== incoming.variant) return false;
+	if (entry.rated !== incoming.rated) return false;
+	const a = ratingOf('entry') ?? 1500;
+	const b = ratingOf('incoming') ?? 1500;
+	return Math.abs(a - b) <= bandFor(nowMs - entry.since);
 }
 
 const quickPairPool = new Map<string, PoolEntry>();
@@ -155,40 +188,83 @@ export function leaveQuickPair(userId: string): void {
 	waitingResolvers.delete(userId);
 }
 
+/** Rating used when a player has no row yet: the Glicko-2 start value. */
+async function ratingForSpeed(
+	userId: string,
+	variant: VariantId,
+	speedClass: LobbySpeed
+): Promise<number | null> {
+	if (speedClass === 'correspondence') return null;
+	const [row] = await db
+		.select({ rating: ratings.rating })
+		.from(ratings)
+		.where(
+			and(
+				eq(ratings.userId, userId),
+				eq(ratings.variant, variant),
+				eq(ratings.speedClass, speedClass)
+			)
+		)
+		.limit(1);
+	return row?.rating ?? null;
+}
+
 /** Join the pool; resolves with a game id once a partner is matched. */
 export async function joinQuickPair(
 	userId: string,
 	speedClass: LobbySpeed,
 	variant: VariantId,
-	rated: boolean
+	rated: boolean,
+	signal?: AbortSignal
 ): Promise<{ gameId: string | null }> {
 	if (waitingResolvers.has(userId)) return { gameId: null };
 	leaveQuickPair(userId);
 
-	for (const [otherId, entry] of quickPairPool.entries()) {
-		if (entry.userId === userId) continue;
-		if (entry.speedClass !== speedClass) continue;
-		quickPairPool.delete(otherId);
-		const resolver = waitingResolvers.get(entry.userId);
-		waitingResolvers.delete(entry.userId);
-		const whiteFirst = Math.random() < 0.5;
-		const gameId = await createGame({
-			variant,
-			rated,
-			timeControl: PRESETS[speedClass],
-			whiteId: whiteFirst ? entry.userId : userId,
-			blackId: whiteFirst ? userId : entry.userId
-		});
-		await db.insert(gamePlayers).values([
-			{ gameId, userId: whiteFirst ? entry.userId : userId, color: 'white' as Color },
-			{ gameId, userId: whiteFirst ? userId : entry.userId, color: 'black' as Color }
-		]);
-		await db.update(games).set({ status: 'started' }).where(eq(games.id, gameId));
-		resolver?.(gameId);
-		return { gameId };
+	if (signal?.aborted) return { gameId: null };
+	const onAbort = () => leaveQuickPair(userId);
+	signal?.addEventListener('abort', onAbort, { once: true });
+
+	try {
+		for (const [otherId, entry] of quickPairPool.entries()) {
+			if (entry.userId === userId) continue;
+			const mine = await ratingForSpeed(
+				userId,
+				variant,
+				speedClass === 'correspondence' ? 'classical' : speedClass
+			);
+			const theirs = await ratingForSpeed(
+				entry.userId,
+				variant,
+				entry.speedClass === 'correspondence' ? 'classical' : entry.speedClass
+			);
+			const ratingOf = (id: string): number | null => (id === userId ? mine : theirs);
+			if (!pairCompatible(entry, { speedClass, variant, rated }, ratingOf, Date.now())) continue;
+			quickPairPool.delete(otherId);
+			const resolver = waitingResolvers.get(entry.userId);
+			waitingResolvers.delete(entry.userId);
+			const whiteFirst = Math.random() < 0.5;
+			const gameId = await createGame({
+				variant,
+				rated,
+				timeControl: PRESETS[speedClass],
+				whiteId: whiteFirst ? entry.userId : userId,
+				blackId: whiteFirst ? userId : entry.userId
+			});
+			await db.insert(gamePlayers).values([
+				{ gameId, userId: whiteFirst ? entry.userId : userId, color: 'white' as Color },
+				{ gameId, userId: whiteFirst ? userId : entry.userId, color: 'black' as Color }
+			]);
+			await db.update(games).set({ status: 'started' }).where(eq(games.id, gameId));
+			resolver?.(gameId);
+			return { gameId };
+		}
+	} finally {
+		if (quickPairPool.has(userId) && signal?.aborted) leaveQuickPair(userId);
 	}
 
-	quickPairPool.set(userId, { userId, speedClass, since: Date.now() });
+	if (signal?.aborted) return { gameId: null };
+
+	quickPairPool.set(userId, { userId, speedClass, variant, rated, since: Date.now() });
 	return new Promise((resolvePromise) => {
 		waitingResolvers.set(userId, (gid) => resolvePromise({ gameId: gid }));
 	});
