@@ -32,7 +32,17 @@ export function oidcProvidersFromEnv(): OidcProviderConfig[] {
 	];
 }
 
+function authSecret(): string {
+	const fromEnv = process.env.BETTER_AUTH_SECRET;
+	if (fromEnv) return fromEnv;
+	if (process.env.NODE_ENV === 'production') {
+		throw new Error('BETTER_AUTH_SECRET must be set when NODE_ENV is production.');
+	}
+	return 'openboard-dev-secret-do-not-use-in-production';
+}
+
 export const auth = betterAuth({
+	secret: authSecret(),
 	baseURL: process.env.ORIGIN ?? process.env.BETTER_AUTH_URL,
 	database: drizzleAdapter(db, {
 		provider: 'pg',
