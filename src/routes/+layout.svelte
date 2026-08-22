@@ -29,9 +29,7 @@
 	<a class="brand" href={resolve('/')}>OpenBoard</a>
 	<nav class="main-nav" aria-label="Main">
 		{#each navLinks as link (link.href)}
-			<a href={link.href} aria-current={active(link.href) ? 'page' : undefined}
-				>{link.label}</a
-			>
+			<a href={link.href} aria-current={active(link.href) ? 'page' : undefined}>{link.label}</a>
 		{/each}
 	</nav>
 	<div class="right">

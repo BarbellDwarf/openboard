@@ -12,11 +12,11 @@ OpenBoard stands on open-source art and code. Everything shipped in this reposit
 
 ## Piece sets
 
-| Set | Files | License | Source |
-|---|---|---|---|
-| Classic | static/pieces/cburnett | BSD-3-Clause option of the multi-licensed cburnett set. Attribution: Colin M.L. Burnett. | Wikimedia Commons / lichess |
-| Arcane (wizard-themed) | static/pieces/arcane | Project-original artwork, GPL-3.0-or-later. Authored for OpenBoard. | this repository |
-| Draconic (dragon-themed) | static/pieces/draconic | Project-original artwork, GPL-3.0-or-later. Authored for OpenBoard. | this repository |
+| Set                      | Files                  | License                                                                                  | Source                      |
+| ------------------------ | ---------------------- | ---------------------------------------------------------------------------------------- | --------------------------- |
+| Classic                  | static/pieces/cburnett | BSD-3-Clause option of the multi-licensed cburnett set. Attribution: Colin M.L. Burnett. | Wikimedia Commons / lichess |
+| Arcane (wizard-themed)   | static/pieces/arcane   | Project-original artwork, GPL-3.0-or-later. Authored for OpenBoard.                      | this repository             |
+| Draconic (dragon-themed) | static/pieces/draconic | Project-original artwork, GPL-3.0-or-later. Authored for OpenBoard.                      | this repository             |
 
 ## Board themes
 

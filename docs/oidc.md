@@ -28,7 +28,7 @@ The issuer URL is the slug URL of the provider application; OpenBoard appends th
 clients:
   - id: openboard
     description: OpenBoard
-    secret: "$plaintext$your-client-secret"
+    secret: '$plaintext$your-client-secret'
     redirect_uris:
       - https://YOUR-OPENBOARD-HOST/api/auth/callback/oidc
     scopes: [openid, email, profile]
