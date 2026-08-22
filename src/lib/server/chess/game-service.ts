@@ -107,7 +107,8 @@ export interface MovePersistenceResult {
 		| 'game-not-started'
 		| 'illegal-move'
 		| 'invalid-move-format'
-		| 'invalid-position';
+		| 'invalid-position'
+		| 'already-moved';
 	finished?: { result: ResultValue; termination: Termination } | null;
 	state?: EngineState;
 	san?: string;
@@ -119,57 +120,70 @@ export async function persistMove(gameId: string, uci: string): Promise<MovePers
 	if (!loaded) return { applied: false, reason: 'game-not-found' };
 	if (loaded.status !== 'started') return { applied: false, reason: 'game-not-started' };
 
+	// Stored xfens are positions after each ply; the pre-move position is
+	// already the last entry, so do not duplicate it here.
 	const history = await moveHistoryXfens(gameId);
-	history.push(loaded.state.xfen);
 
 	const outcome = applyMove(loaded.variant, loaded.state.xfen, uci);
 	if (!outcome.ok) return { applied: false, reason: outcome.error };
 
 	let finished: { result: ResultValue; termination: Termination } | null = outcome.finished;
-	if (!finished && drawByRepetition(history))
+	if (!finished && drawByRepetition([...history, outcome.state.xfen]))
 		finished = { result: 'draw', termination: 'repetition' };
 	if (!finished && drawByFiftyMoves(outcome.state.xfen)) {
 		finished = { result: 'draw', termination: 'fifty-moves' };
 	}
 
-	await db.transaction(async (tx) => {
-		await tx.insert(movesTable).values({
-			gameId,
-			ply: loaded.sanMoves.length + 1,
-			uci,
-			san: outcome.san,
-			xfenAfter: outcome.state.xfen
-		});
-		await tx
-			.update(games)
-			.set({
-				currentXfen: outcome.state.xfen,
-				moveCount: loaded.sanMoves.length + 1,
-				lastMoveAt: new Date(),
-				pgn: buildPgn({
-					variant: loaded.variant,
-					rated: loaded.rated,
-					whiteName: 'White',
-					blackName: 'Black',
-					sanMoves: [...loaded.sanMoves, outcome.san],
-					result: finished?.result ?? null,
-					timeControlDescription: timeControlDescription(loaded.timeControl)
-				})
-			})
-			.where(eq(games.id, gameId));
-
-		if (finished) {
+	try {
+		await db.transaction(async (tx) => {
+			await tx.insert(movesTable).values({
+				gameId,
+				ply: loaded.sanMoves.length + 1,
+				uci,
+				san: outcome.san,
+				xfenAfter: outcome.state.xfen
+			});
 			await tx
 				.update(games)
 				.set({
-					status: 'finished',
-					result: finished.result,
-					termination: finished.termination,
-					finishedAt: new Date()
+					currentXfen: outcome.state.xfen,
+					moveCount: loaded.sanMoves.length + 1,
+					lastMoveAt: new Date(),
+					pgn: buildPgn({
+						variant: loaded.variant,
+						rated: loaded.rated,
+						whiteName: 'White',
+						blackName: 'Black',
+						sanMoves: [...loaded.sanMoves, outcome.san],
+						result: finished?.result ?? null,
+						timeControlDescription: timeControlDescription(loaded.timeControl)
+					})
 				})
 				.where(eq(games.id, gameId));
+
+			if (finished) {
+				await tx
+					.update(games)
+					.set({
+						status: 'finished',
+						result: finished.result,
+						termination: finished.termination,
+						finishedAt: new Date()
+					})
+					.where(eq(games.id, gameId));
+			}
+		});
+	} catch (error) {
+		// Unique violation on (game_id, ply): a concurrent identical move won.
+		if (
+			typeof error === 'object' &&
+			error !== null &&
+			(error as { code?: string }).code === '23505'
+		) {
+			return { applied: false, reason: 'already-moved' };
 		}
-	});
+		throw error;
+	}
 
 	return { applied: true, finished, state: outcome.state, san: outcome.san };
 }
