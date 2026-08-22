@@ -68,8 +68,7 @@
 					<option value="blitz">Blitz 5+2</option>
 					<option value="rapid">Rapid 10+10</option>
 					<option value="classical">Classical 30+30</option>
-					{#if speed === 'correspondence'}<option value="correspondence">Correspondence</option
-						>{/if}
+					<option value="correspondence">Correspondence</option>
 				</select>
 			</label>
 			<button type="button" onclick={() => (speed = 'correspondence')}>Correspondence...</button>
