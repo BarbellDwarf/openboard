@@ -221,7 +221,8 @@ export function injectSocketIO(io: IOServer): void {
 			}
 		);
 
-		const chatTimes: number[] = [];
+		// Per-user, matching the HTTP chat path's limits.
+		const chatTimesByUser = new Map<string, number[]>();
 		socket.on(
 			'game:chat-send',
 			async ({ gameId, body }: { gameId: string; body: string }, ack?: (r: unknown) => void) => {
@@ -231,9 +232,12 @@ export function injectSocketIO(io: IOServer): void {
 					return ack?.({ ok: false, reason: 'not-a-player' });
 				}
 				const now = Date.now();
-				while (chatTimes.length > 0 && now - chatTimes[0] > 10_000) chatTimes.shift();
-				if (chatTimes.length >= 5) return ack?.({ ok: false, reason: 'rate-limited' });
-				chatTimes.push(now);
+				const times = (chatTimesByUser.get(socket.data.userId) ?? []).filter(
+					(t) => now - t < 10_000
+				);
+				if (times.length >= 5) return ack?.({ ok: false, reason: 'rate-limited' });
+				times.push(now);
+				chatTimesByUser.set(socket.data.userId, times);
 				const text = body.slice(0, 500).trim();
 				const id = await addMessage(gameId, socket.data.userId, text);
 				io.to(`game:${gameId}`).emit('game:chat', {
