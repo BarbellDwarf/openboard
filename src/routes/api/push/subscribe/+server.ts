@@ -3,7 +3,7 @@ import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { pushSubscriptions } from '$lib/server/db/schema';
 import type { RequestHandler } from './$types';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { vapidPublicKey } from '$lib/server/notifications';
 
 /** Report the VAPID public key before prompting the user. */
@@ -47,6 +47,14 @@ export const DELETE: RequestHandler = async ({ request, locals }) => {
 	if (!locals.user) return json({ ok: false }, { status: 401 });
 	const body = (await request.json()) as { endpoint?: string };
 	if (!body.endpoint) return json({ ok: false }, { status: 422 });
-	await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, body.endpoint));
+	// Scope the delete to the caller: one user must not remove another's subscription.
+	await db
+		.delete(pushSubscriptions)
+		.where(
+			and(
+				eq(pushSubscriptions.endpoint, body.endpoint),
+				eq(pushSubscriptions.userId, locals.user.id)
+			)
+		);
 	return json({ ok: true });
 };
