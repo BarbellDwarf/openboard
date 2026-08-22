@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
 	import { authClient, oidcProviderId } from '$lib/client/auth';
 
 	import type { PageData } from './$types';
@@ -25,7 +24,8 @@
 			error = result.error.message ?? 'Sign-in failed. Check your email and password.';
 			return;
 		}
-		goto(data.returnTo);
+		window.location.href = data.returnTo;
+		return;
 	}
 
 	async function signInWithOidc() {
