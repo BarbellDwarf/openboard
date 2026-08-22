@@ -29,17 +29,34 @@ interface RoomState {
 	drawOfferedBy?: Color;
 	rematchVotes: Set<Color>;
 	newGameId?: string;
+	/** Last time any handler touched this room, for idle eviction. */
+	lastTouchedAtMs: number;
 }
+
+const ROOM_IDLE_MS = 30 * 60 * 1000;
 
 const rooms = new Map<string, RoomState>();
 
 function roomFor(gameId: string): RoomState {
 	let room = rooms.get(gameId);
 	if (!room) {
-		room = { rematchVotes: new Set() };
+		room = { rematchVotes: new Set(), lastTouchedAtMs: Date.now() };
 		rooms.set(gameId, room);
 	}
+	room.lastTouchedAtMs = Date.now();
 	return room;
+}
+
+/** Drop rooms idle past ROOM_IDLE_MS so the map cannot grow without bound. */
+export function evictIdleRooms(nowMs: number = Date.now()): number {
+	let removed = 0;
+	for (const [gameId, room] of rooms) {
+		if (room.clock) continue;
+		if (nowMs - room.lastTouchedAtMs < ROOM_IDLE_MS) continue;
+		rooms.delete(gameId);
+		removed++;
+	}
+	return removed;
 }
 
 function clockView(room: RoomState, nowMs: number) {
@@ -81,7 +98,13 @@ export function injectSocketIO(io: IOServer): void {
 				if (!game) return ack?.({ ok: false });
 				const room = roomFor(gameId);
 				if (game.timeControl.initialMs != null && !room.clock && game.status === 'started') {
-					room.clock = initialClock(game.timeControl, game.lastMoveAtMs);
+					// Resume mid-game: tick whoever is to move, charging only the
+					// elapsed time since their turn began.
+					const turn = game.state.xfen.split(' ')[1] === 'b' ? 'black' : 'white';
+					room.clock = initialClock(game.timeControl, Date.now(), {
+						turn,
+						turnStartedAtMs: game.lastMoveAtMs
+					});
 				}
 				await socket.join(`game:${gameId}`);
 				const color = socket.data.userId ? await playerColorFor(gameId, socket.data.userId) : null;
@@ -133,7 +156,12 @@ export function injectSocketIO(io: IOServer): void {
 				if (room.clock) {
 					const flagged = flaggedColor(room.clock, nowMs);
 					if (flagged) {
-						await completeGame(gameId, flagged === 'white' ? 'black' : 'white', 'timeout');
+						try {
+							await completeGame(gameId, flagged === 'white' ? 'black' : 'white', 'timeout');
+						} catch (error) {
+							console.error('[realtime] flag finalize failed:', error);
+							return ack?.({ ok: false, reason: 'internal-error' });
+						}
 						io.to(`game:${gameId}`).emit('game:over', {
 							result: flagged === 'white' ? 'black' : 'white',
 							termination: 'timeout'
@@ -142,7 +170,14 @@ export function injectSocketIO(io: IOServer): void {
 					}
 				}
 
-				const result = await persistMove(gameId, uci);
+				let result;
+				try {
+					result = await persistMove(gameId, uci);
+				} catch (error) {
+					// Concurrent duplicate moves lose the unique(game_id, ply) race.
+					console.error('[realtime] move persistence failed:', error);
+					return ack?.({ ok: false, reason: 'rejected' });
+				}
 				if (!result.applied) return ack?.({ ok: false, reason: result.reason ?? 'rejected' });
 
 				if (room.clock) {
@@ -175,7 +210,12 @@ export function injectSocketIO(io: IOServer): void {
 			if (!color) return;
 			const game = await loadGame(gameId);
 			if (!game || game.status !== 'started') return;
-			await completeGame(gameId, color === 'white' ? 'black' : 'white', 'resignation');
+			try {
+				await completeGame(gameId, color === 'white' ? 'black' : 'white', 'resignation');
+			} catch (error) {
+				console.error('[realtime] resignation finalize failed:', error);
+				return;
+			}
 			io.to(`game:${gameId}`).emit('game:over', {
 				result: color === 'white' ? 'black' : 'white',
 				termination: 'resignation'
@@ -194,44 +234,58 @@ export function injectSocketIO(io: IOServer): void {
 			if (!socket.data.userId) return;
 			const color = await playerColorFor(gameId, socket.data.userId);
 			if (!color) return;
+			// Only the recipient of a live offer may accept it.
+			const room = rooms.get(gameId);
+			if (!room?.drawOfferedBy || room.drawOfferedBy === color) return;
 			const game = await loadGame(gameId);
 			if (!game || game.status !== 'started') return;
-			await completeGame(gameId, 'draw', 'agreement');
+			room.drawOfferedBy = undefined;
+			try {
+				await completeGame(gameId, 'draw', 'agreement');
+			} catch (error) {
+				console.error('[realtime] draw finalize failed:', error);
+				return;
+			}
 			io.to(`game:${gameId}`).emit('game:over', { result: 'draw', termination: 'agreement' });
 		});
 
-		socket.on('game:draw-decline', ({ gameId }: { gameId: string }) => {
+		socket.on('game:draw-decline', async ({ gameId }: { gameId: string }) => {
+			if (!socket.data.userId) return;
+			if (!(await playerColorFor(gameId, socket.data.userId))) return;
 			roomFor(gameId).drawOfferedBy = undefined;
 			socket.to(`game:${gameId}`).emit('game:draw-declined');
 		});
 
-		socket.on('game:rematch-offer', ({ gameId, color }: { gameId: string; color: Color }) => {
+		socket.on('game:rematch-offer', async ({ gameId }: { gameId: string }) => {
+			if (!socket.data.userId) return;
+			const color = await playerColorFor(gameId, socket.data.userId);
+			if (!color) return;
 			const room = roomFor(gameId);
 			room.rematchVotes.add(color);
 			socket.to(`game:${gameId}`).emit('game:rematch-offered', { by: color });
 		});
 
-		socket.on(
-			'game:rematch-accept',
-			async ({ gameId, myColor }: { gameId: string; myColor: Color }) => {
-				const room = rooms.get(gameId);
-				if (!room) return;
-				room.rematchVotes.add(myColor);
-				if (room.rematchVotes.size >= 2 && !room.newGameId) {
-					const game = await loadGame(gameId);
-					if (!game) return;
-					const newGameId = await createGame({
-						variant: game.variant,
-						rated: game.rated,
-						timeControl: game.timeControl,
-						whiteId: game.blackId,
-						blackId: game.whiteId
-					});
-					room.newGameId = newGameId;
-					io.to(`game:${gameId}`).emit('game:rematch-ready', { gameId: newGameId });
-					rooms.delete(gameId);
-				}
+		socket.on('game:rematch-accept', async ({ gameId }: { gameId: string }) => {
+			if (!socket.data.userId) return;
+			const myColor = await playerColorFor(gameId, socket.data.userId);
+			if (!myColor) return;
+			const room = rooms.get(gameId);
+			if (!room) return;
+			room.rematchVotes.add(myColor);
+			if (room.rematchVotes.size >= 2 && !room.newGameId) {
+				const game = await loadGame(gameId);
+				if (!game) return;
+				const newGameId = await createGame({
+					variant: game.variant,
+					rated: game.rated,
+					timeControl: game.timeControl,
+					whiteId: game.blackId,
+					blackId: game.whiteId
+				});
+				room.newGameId = newGameId;
+				io.to(`game:${gameId}`).emit('game:rematch-ready', { gameId: newGameId });
+				// Keep the room with newGameId set so repeat offers cannot resurrect it.
 			}
-		);
+		});
 	});
 }
