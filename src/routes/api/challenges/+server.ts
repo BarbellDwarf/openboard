@@ -85,7 +85,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	}
 
 	if (body.action === 'quickpair') {
-		return json(await joinQuickPair(locals.user.id, speed, variant, !!body.rated));
+		return json(await joinQuickPair(locals.user.id, speed, variant, !!body.rated, request.signal));
 	}
 
 	if (body.action === 'leave-pool') {
