@@ -46,9 +46,30 @@ export const PATCH: RequestHandler = async ({ request, locals }) => {
 		'autoQueen',
 		'boardFlavor'
 	] as const;
+	// Type-check every field so bad payloads 422 instead of hitting Postgres.
+	const booleans = [
+		'animations',
+		'coordinates',
+		'soundsEnabled',
+		'showDests',
+		'autoQueen'
+	] as const;
 	const patch: Record<string, unknown> = {};
 	for (const key of allowed) {
-		if (body[key] !== undefined) patch[key] = body[key];
+		const value = body[key];
+		if (value === undefined) continue;
+		if (key === 'soundVolume') {
+			if (typeof value !== 'number' || value < 0 || value > 1) {
+				return json({ ok: false, reason: 'bad-sound-volume' }, { status: 422 });
+			}
+		} else if ((booleans as readonly string[]).includes(key)) {
+			if (typeof value !== 'boolean') {
+				return json({ ok: false, reason: `bad-${key}` }, { status: 422 });
+			}
+		} else if (typeof value !== 'string') {
+			return json({ ok: false, reason: `bad-${key}` }, { status: 422 });
+		}
+		patch[key] = value;
 	}
 	if (Object.keys(patch).length === 0) return json({ ok: false }, { status: 422 });
 
