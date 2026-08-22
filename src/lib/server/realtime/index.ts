@@ -42,16 +42,6 @@ function roomFor(gameId: string): RoomState {
 	return room;
 }
 
-function parseCookies(header: string | undefined): Record<string, string> {
-	const out: Record<string, string> = {};
-	if (!header) return out;
-	for (const part of header.split(';')) {
-		const idx = part.indexOf('=');
-		if (idx === -1) continue;
-		out[part.slice(0, idx).trim()] = decodeURIComponent(part.slice(idx + 1).trim());
-	}
-	return out;
-}
 
 function clockView(room: RoomState, nowMs: number) {
 	if (!room.clock) return null;
@@ -85,7 +75,7 @@ export function injectSocketIO(io: IOServer): void {
 			return false;
 		}
 
-		socket.on('game:join', async ({ gameId }: { gameId: string }, ack?: Function) => {
+		socket.on('game:join', async ({ gameId }: { gameId: string }, ack?: (response: unknown) => void) => {
 			const game = await loadGame(gameId);
 			if (!game) return ack?.({ ok: false });
 			const room = roomFor(gameId);
@@ -121,7 +111,7 @@ export function injectSocketIO(io: IOServer): void {
 
 		socket.on(
 			'game:move',
-			async ({ gameId, uci }: { gameId: string; uci: string }, ack?: Function) => {
+			async ({ gameId, uci }: { gameId: string; uci: string }, ack?: (response: unknown) => void) => {
 				if (!socket.data.userId) return ack?.({ ok: false, reason: 'unauthorized' });
 				if (rateLimited()) return ack?.({ ok: false, reason: 'rate-limited' });
 
