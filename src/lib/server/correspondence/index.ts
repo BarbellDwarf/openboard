@@ -25,8 +25,8 @@ export async function sweepOnce(): Promise<number> {
 		const turn = game.currentXfen?.split(' ')[1];
 		if (elapsed <= deadlineMs) continue;
 		const loser = turn === 'w' ? 'white' : 'black';
-		const result: ResultValue = loser === 'white' ? 'black' : 'white';
-		const termination: Termination = 'timeout';
+		const result = loser === 'white' ? 'black' : 'white';
+		const termination = 'timeout';
 		await db
 			.update(games)
 			.set({ status: 'finished', result, termination, finishedAt: new Date() })
