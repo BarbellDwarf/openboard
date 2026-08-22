@@ -33,6 +33,10 @@
 	let lastMove = $state<[string, string] | null>(null);
 	let checkSquare = $state<string | null>(null);
 	let clock = $state<{ whiteMs: number; blackMs: number; ticking: string | null } | null>(null);
+	/** When `clock` was received; the ticking side drains from this moment. */
+	let clockAt = $state<number>(Date.now());
+	/** Ticking value for dial text, recomputed on every ticker tick. */
+	let nowMs = $state<number>(Date.now());
 	let deadline = $state<number | null>(null);
 	let incomingDrawForYou = $state(false);
 	let over = $state<{ result: string; termination: string } | null>(null);
@@ -55,8 +59,16 @@
 	function startTicker(): void {
 		if (ticker) return;
 		ticker = setInterval(() => {
-			void Date.now();
+			nowMs = Date.now();
 		}, 500);
+	}
+
+	/** Remaining time for one side, draining locally between server updates. */
+	function liveMs(side: 'white' | 'black'): number {
+		if (!clock) return 0;
+		const base = side === 'white' ? clock.whiteMs : clock.blackMs;
+		if (clock.ticking !== side) return base;
+		return Math.max(0, base - (nowMs - clockAt));
 	}
 
 	function fmtClock(ms: number): string {
@@ -93,7 +105,10 @@
 		xfen = String(st.xfen);
 		dests = st.dests as DestMap;
 		checkSquare = st.inCheck ? findKing(st.xfen as string) : null;
-		if (payload.clock) clock = payload.clock as typeof clock;
+		if (payload.clock) {
+			clock = payload.clock as typeof clock;
+			clockAt = Date.now();
+		}
 		if (payload.deadline) deadline = Number(payload.deadline);
 	}
 
@@ -133,6 +148,7 @@
 			dests = (join.state.dests as DestMap) ?? {};
 			sanMoves = join.sanMoves ?? [];
 			clock = join.clock ?? null;
+			clockAt = Date.now();
 			deadline = join.deadline ?? null;
 			startTicker();
 
@@ -202,7 +218,7 @@
 					style={clock && info.timeControl.initialMs != null ? '' : 'display:none'}
 					aria-label="Black clock"
 				>
-					{clock ? fmtClock(clock.blackMs - (clock.ticking === 'black' ? 0 : 0)) : '-'}
+					{clock ? fmtClock(liveMs('black')) : '-'}
 				</span>
 			</div>
 
@@ -225,7 +241,7 @@
 					style={clock && info.timeControl.initialMs != null ? '' : 'display:none'}
 					aria-label="White clock"
 				>
-					{clock ? fmtClock(clock.whiteMs) : '-'}
+					{clock ? fmtClock(liveMs('white')) : '-'}
 				</span>
 			</div>
 
