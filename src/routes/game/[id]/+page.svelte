@@ -126,6 +126,9 @@
 				return;
 			}
 			info = join.game as unknown as GameInfo;
+			if (info.status === 'finished' && info.result) {
+				over = { result: String(info.result), termination: String(info.termination ?? '') };
+			}
 			xfen = String(join.state.xfen);
 			dests = (join.state.dests as DestMap) ?? {};
 			sanMoves = join.sanMoves ?? [];
