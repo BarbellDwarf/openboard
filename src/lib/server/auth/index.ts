@@ -1,3 +1,4 @@
+import { building } from '$app/environment';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { genericOAuth } from 'better-auth/plugins';
@@ -35,7 +36,7 @@ export function oidcProvidersFromEnv(): OidcProviderConfig[] {
 function authSecret(): string {
 	const fromEnv = process.env.BETTER_AUTH_SECRET;
 	if (fromEnv) return fromEnv;
-	if (process.env.NODE_ENV === 'production') {
+	if (process.env.NODE_ENV === 'production' && !building) {
 		throw new Error('BETTER_AUTH_SECRET must be set when NODE_ENV is production.');
 	}
 	return 'openboard-dev-secret-do-not-use-in-production';
