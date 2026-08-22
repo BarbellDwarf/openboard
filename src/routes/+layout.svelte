@@ -13,7 +13,6 @@
 		{ href: '/play-bot', label: 'Play a bot' }
 	];
 
-	let menuOpen = $state(false);
 
 	async function signOut(): Promise<void> {
 		await fetch('/logout', { method: 'POST' });
