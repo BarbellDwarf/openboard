@@ -14,12 +14,24 @@ export interface LiveClock {
 	turnStartedAtMs: number;
 }
 
-export function initialClock(tc: TimeControl, firstTurnStartedAtMs: number): LiveClock {
+/** Resume information for a clock interrupted mid-game (e.g. after a restart). */
+export interface ClockResume {
+	/** Side to move right now. */
+	turn: Color;
+	/** When that side's turn began, ms epoch. */
+	turnStartedAtMs: number;
+}
+
+export function initialClock(tc: TimeControl, nowMs: number, resume?: ClockResume): LiveClock {
+	const turn = resume?.turn ?? 'white';
+	const turnStart = resume?.turnStartedAtMs ?? nowMs;
+	const base = tc.initialMs ?? 0;
+	const drained = Math.max(0, nowMs - turnStart);
 	return {
-		whiteMs: tc.initialMs ?? 0,
-		blackMs: tc.initialMs ?? 0,
-		ticking: 'white',
-		turnStartedAtMs: firstTurnStartedAtMs
+		whiteMs: turn === 'white' ? Math.max(0, base - drained) : base,
+		blackMs: turn === 'black' ? Math.max(0, base - drained) : base,
+		ticking: turn,
+		turnStartedAtMs: turnStart
 	};
 }
 
