@@ -73,22 +73,6 @@ export function updateRating(player: Rating, opponents: OpponentResult[]): Ratin
 	let B = deltaSq - phiSq - v > 0 ? Math.log(deltaSq - phiSq - v) : a - TAU;
 	let fA = f(A);
 	let fB = f(B);
-	console.log(
-		'BRACKET A',
-		A.toFixed(3),
-		'fA',
-		fA.toFixed(5),
-		'| B',
-		B.toFixed(3),
-		'fB',
-		fB.toFixed(5),
-		'| deltaSq',
-		deltaSq.toFixed(4),
-		'v',
-		v.toFixed(4),
-		'dSum',
-		dSum.toFixed(5)
-	);
 
 	// Widen the bracket until it truly straddles the root.
 	let guard = 0;
