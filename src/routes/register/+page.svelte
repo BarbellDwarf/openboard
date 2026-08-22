@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
 	import { authClient } from '$lib/client/auth';
 
 	let name = $state('');
@@ -22,7 +21,8 @@
 			error = result.error.message ?? 'Registration failed. Try a different email.';
 			return;
 		}
-		goto('/');
+		window.location.href = '/';
+		return;
 	}
 </script>
 
