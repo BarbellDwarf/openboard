@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseFen, makeFen } from 'chessops/fen';
+import { makeFen } from 'chessops/fen';
 import { parseSan } from 'chessops/san';
 
 import {
