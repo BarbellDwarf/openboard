@@ -1,12 +1,19 @@
 import { asc, and, eq, isNull } from 'drizzle-orm';
 
 import { db } from '$lib/server/db';
-import { chatMessages } from '$lib/server/db/schema';
+import { chatMessages, users } from '$lib/server/db/schema';
 
 export async function historyFor(gameId: string) {
 	return db
-		.select()
+		.select({
+			id: chatMessages.id,
+			userId: chatMessages.userId,
+			name: users.name,
+			body: chatMessages.body,
+			createdAt: chatMessages.createdAt
+		})
 		.from(chatMessages)
+		.innerJoin(users, eq(users.id, chatMessages.userId))
 		.where(and(eq(chatMessages.gameId, gameId), isNull(chatMessages.deletedAt)))
 		.orderBy(asc(chatMessages.createdAt));
 }
