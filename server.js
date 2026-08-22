@@ -7,7 +7,18 @@ import { pool } from './src/lib/server/config/db.js';
 const port = Number(process.env.PORT ?? 3000);
 const host = process.env.HOST ?? '0.0.0.0';
 
+function validateProductionEnv() {
+	if (process.env.NODE_ENV !== 'production') return;
+	const required = ['DATABASE_URL', 'ORIGIN', 'BETTER_AUTH_SECRET'];
+	const missing = required.filter((key) => !process.env[key]);
+	if (missing.length > 0) {
+		console.error(`Missing required environment variables: ${missing.join(', ')}`);
+		process.exit(1);
+	}
+}
+
 async function start() {
+	validateProductionEnv();
 	let handler;
 	try {
 		({ handler } = await import('./build/handler.js'));
