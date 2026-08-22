@@ -3,7 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { and, eq, gt } from 'drizzle-orm';
 
 import { db } from '$lib/server/db';
-import { challenges, games, gamePlayers, ratings } from '$lib/server/db/schema';
+import { challenges, games, gamePlayers, ratings, users } from '$lib/server/db/schema';
 import { createGame } from '$lib/server/chess/game-service';
 import type { Color, SpeedClass, VariantId } from '$lib/server/chess/types';
 
@@ -35,7 +35,7 @@ export async function createChallenge(input: {
 	rated: boolean;
 	colorChoice: 'random' | 'white' | 'black';
 	days?: number;
-}): Promise<string> {
+}): Promise<{ id: string; token: string }> {
 	const preset = PRESETS[input.speedClass];
 	const tc: TimeControlPreset =
 		input.speedClass === 'correspondence' ? { ...preset, daysPerMove: input.days ?? 3 } : preset;
@@ -55,8 +55,32 @@ export async function createChallenge(input: {
 			speedClass: input.speedClass,
 			expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
 		})
-		.returning({ id: challenges.id });
-	return row.id;
+		.returning({ id: challenges.id, token: challenges.token });
+	return { id: row.id, token: row.token };
+}
+
+/** Look up a shareable-token challenge for the accept screen. */
+export async function challengeByToken(token: string) {
+	const [row] = await db
+		.select({
+			id: challenges.id,
+			variant: challenges.variant,
+			speedClass: challenges.speedClass,
+			rated: challenges.rated,
+			initialMs: challenges.initialMs,
+			incrementMs: challenges.incrementMs,
+			daysPerMove: challenges.daysPerMove,
+			colorChoice: challenges.colorChoice,
+			status: challenges.status,
+			expiresAt: challenges.expiresAt,
+			challengerId: challenges.challengerId,
+			challengerName: users.name
+		})
+		.from(challenges)
+		.innerJoin(users, eq(users.id, challenges.challengerId))
+		.where(eq(challenges.token, token))
+		.limit(1);
+	return row ?? null;
 }
 
 export async function listOpenChallenges() {
