@@ -13,7 +13,6 @@
 		{ href: '/play-bot', label: 'Play a bot' }
 	];
 
-
 	async function signOut(): Promise<void> {
 		await fetch('/logout', { method: 'POST' });
 		window.location.href = resolve('/');
