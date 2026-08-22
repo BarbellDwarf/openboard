@@ -10,7 +10,15 @@
 
 	type JoinResponse = {
 		ok: boolean;
-		game?: { variant?: string } | null;
+		game?: {
+			variant?: string;
+			status?: string;
+			result?: string | null;
+			termination?: string | null;
+			whiteId?: string | null;
+			blackId?: string | null;
+			yourColor?: 'white' | 'black' | null;
+		} | null;
 		state?: { xfen?: unknown; dests?: DestMap } | null;
 		sanMoves?: string[];
 		clock?: unknown;
@@ -22,6 +30,8 @@
 	let info = $state<{
 		variant?: string;
 		status?: string;
+		result?: string | null;
+		termination?: string | null;
 		whiteId?: string | null;
 		blackId?: string | null;
 		yourColor?: 'white' | 'black' | null;
@@ -32,7 +42,33 @@
 	let lastMove = $state<[string, string] | null>(null);
 	let checkSquare = $state<string | null>(null);
 	let botThinking = $state(false);
+	let over = $state<{ result: string; termination: string } | null>(null);
+	let orientation = $state<'white' | 'black'>('white');
 	let unsub: Array<() => void> = [];
+
+	const TERMINATIONS: Record<string, string> = {
+		checkmate: 'checkmate',
+		resignation: 'resignation',
+		timeout: 'time forfeit',
+		stalemate: 'stalemate',
+		'insufficient-material': 'insufficient material',
+		agreement: 'mutual agreement',
+		repetition: 'threefold repetition',
+		'fifty-moves': 'fifty-move rule',
+		kingofthehill: 'king reached the center',
+		threecheck: 'third check given',
+		racingkings: 'race finished',
+		'atomic-explosion': 'atomic explosion',
+		'horde-elimination': 'horde eliminated'
+	};
+
+	const overText = $derived.by(() => {
+		if (!over) return '';
+		const how = TERMINATIONS[over.termination] ?? over.termination;
+		return over.result === 'draw'
+			? `Drawn by ${how}.`
+			: `${over.result === 'white' ? 'White' : 'Black'} won by ${how}.`;
+	});
 
 	function findKing(fen: string): string | null {
 		const target = fen.split(' ')[1] === 'w' ? 'K' : 'k';
@@ -72,6 +108,7 @@
 	}
 
 	async function maybeBotReply(): Promise<void> {
+		if (over) return;
 		const turn = xfen.split(' ')[1];
 		const seatEmpty = info?.whiteId === null || info?.blackId === null;
 		if (!seatEmpty || !info) return;
@@ -96,6 +133,13 @@
 			const join: JoinResponse = await gameChannel.join(gameId);
 			if (!join.ok || !join.state) return;
 			info = join.game ?? null;
+			orientation = info?.yourColor === 'black' ? 'black' : 'white';
+			if (info?.status === 'finished') {
+				over = {
+					result: String(info.result ?? 'draw'),
+					termination: String(info.termination ?? '')
+				};
+			}
 			applyState({ state: join.state as { xfen: string; dests: DestMap; inCheck: boolean } });
 			sanMoves = join.sanMoves ?? [];
 
@@ -108,8 +152,18 @@
 				applyState(payload);
 				void maybeBotReply();
 			};
+			const onOver = (p: unknown) => {
+				const payload = p as { result?: string; termination?: string };
+				over = {
+					result: String(payload.result ?? 'draw'),
+					termination: String(payload.termination ?? '')
+				};
+				botThinking = false;
+			};
 			socket.on('game:moved', onMoved);
+			socket.on('game:over', onOver);
 			unsub.push(() => socket.off('game:moved', onMoved));
+			unsub.push(() => socket.off('game:over', onOver));
 			void maybeBotReply();
 		})();
 	});
@@ -124,8 +178,12 @@
 <main class="bot-page">
 	<div class="board-column">
 		<p class="muted">
-			Level {urlLevel} bot. You move both sides' pieces through the server; the bot answers empty seats.
+			Level {urlLevel + 1} bot. You move both sides' pieces through the server; the bot answers empty
+			seats.
 		</p>
+		{#if over}
+			<p class="over" role="status">{overText}</p>
+		{/if}
 		<Board
 			{xfen}
 			{dests}
@@ -133,7 +191,7 @@
 			{checkSquare}
 			interactive
 			anyColor
-			orientation="white"
+			{orientation}
 			onMove={(uci) => void onMove(uci)}
 		/>
 	</div>
@@ -145,6 +203,13 @@
 			{/each}
 		</ol>
 		{#if botThinking}<p class="thinking">Bot is thinking...</p>{/if}
+		{#if !over}
+			<button type="button" class="danger" onclick={() => void gameChannel.resign(gameId)}>
+				Resign
+			</button>
+		{:else}
+			<a class="again" href="/play-bot">Play another bot game</a>
+		{/if}
 		<h2>Chat</h2>
 		<ChatPanel {gameId} />
 	</aside>
@@ -190,6 +255,30 @@
 	.thinking {
 		color: var(--amber);
 		font-size: 13px;
+	}
+	.over {
+		color: var(--amber);
+		font-weight: 600;
+		margin: 0 0 0.5rem;
+	}
+	button.danger {
+		padding: 0.45rem 0.9rem;
+		border-radius: 8px;
+		border: 1px solid var(--flag-red);
+		background: transparent;
+		color: var(--flag-red);
+		cursor: pointer;
+		font-size: 13px;
+	}
+	a.again {
+		display: inline-block;
+		padding: 0.45rem 0.9rem;
+		border-radius: 8px;
+		background: var(--amber);
+		color: var(--ink);
+		text-decoration: none;
+		font-size: 13px;
+		font-weight: 600;
 	}
 	@media (max-width: 800px) {
 		.bot-page {

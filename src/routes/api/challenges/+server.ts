@@ -9,7 +9,7 @@ import {
 	joinQuickPair,
 	leaveQuickPair
 } from '$lib/server/matchmaking';
-import { VARIANTS, type VariantId } from '$lib/server/chess/types';
+import { VARIANTS, type Color, type VariantId } from '$lib/server/chess/types';
 import type { LobbySpeed } from '$lib/server/matchmaking';
 import type { RequestHandler } from './$types';
 
@@ -46,9 +46,11 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			classical: { initialMs: 1_800_000, incrementMs: 30_000 }
 		};
 		const tc = presetMap[speed] ?? { initialMs: null, incrementMs: null };
-		const userColor = body.colorChoice === 'black' ? 'black' : 'white';
-		const whiteId = userColor === 'white' ? locals.user!.id : null;
-		const blackId = userColor === 'black' ? locals.user!.id : null;
+		const choice =
+			body.colorChoice === 'random' ? (Math.random() < 0.5 ? 'white' : 'black') : body.colorChoice;
+		const userColor: Color = choice === 'black' ? 'black' : 'white';
+		const whiteId = userColor === 'white' ? locals.user.id : null;
+		const blackId = userColor === 'black' ? locals.user.id : null;
 		const gameId = await createGame({
 			variant,
 			rated: false,
@@ -59,11 +61,11 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		if (userColor === 'white') {
 			await db
 				.insert(gamePlayers)
-				.values({ gameId, userId: locals.user!.id, color: 'white' as never });
+				.values({ gameId, userId: locals.user.id, color: 'white' as Color });
 		} else {
 			await db
 				.insert(gamePlayers)
-				.values({ gameId, userId: locals.user!.id, color: 'black' as never });
+				.values({ gameId, userId: locals.user.id, color: 'black' as Color });
 		}
 		return json({ ok: true, gameId });
 	}
