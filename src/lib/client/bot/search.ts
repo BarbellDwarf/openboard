@@ -69,7 +69,7 @@ function negamax(pos: Position, depth: number, alpha: number, beta: number): num
 		if (outcome.winner === undefined) return 0;
 		return outcome.winner === pos.turn ? MATE - depth : -(MATE - depth);
 	}
-	if (depth === 0) return evaluate(pos);
+	if (depth <= 0) return evaluate(pos);
 
 	let best = -Infinity;
 	for (const { pos: child } of childrenOf(pos)) {
