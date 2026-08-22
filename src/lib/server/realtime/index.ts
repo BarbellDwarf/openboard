@@ -82,7 +82,7 @@ export function injectSocketIO(io: IOServer): void {
 				const room = roomFor(gameId);
 				if (game.timeControl.initialMs != null && !room.clock && game.status === 'started') {
 					// Resume from now: downtime between restarts must not drain clocks.
-				room.clock = initialClock(game.timeControl, Date.now());
+					room.clock = initialClock(game.timeControl, Date.now());
 				}
 				await socket.join(`game:${gameId}`);
 				const color = socket.data.userId ? await playerColorFor(gameId, socket.data.userId) : null;
