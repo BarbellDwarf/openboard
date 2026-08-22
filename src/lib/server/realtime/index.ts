@@ -98,7 +98,12 @@ export function injectSocketIO(io: IOServer): void {
 				if (!game) return ack?.({ ok: false });
 				const room = roomFor(gameId);
 				if (game.timeControl.initialMs != null && !room.clock && game.status === 'started') {
-					room.clock = initialClock(game.timeControl, game.lastMoveAtMs);
+					// Resume mid-game: tick whoever is to move, charging only elapsed turn time.
+					const turnNow = game.state.xfen.split(' ')[1] === 'b' ? 'black' : 'white';
+					room.clock = initialClock(game.timeControl, Date.now(), {
+						turn: turnNow,
+						turnStartedAtMs: game.lastMoveAtMs
+					});
 				}
 				await socket.join(`game:${gameId}`);
 				const color = socket.data.userId ? await playerColorFor(gameId, socket.data.userId) : null;
