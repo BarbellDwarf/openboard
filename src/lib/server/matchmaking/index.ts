@@ -79,6 +79,15 @@ export async function acceptChallenge(
 	challengeId: string,
 	userId: string
 ): Promise<{ ok: boolean; gameId?: string }> {
+	// Cheap pre-check so the common self-accept case never claims anything.
+	const [existing] = await db
+		.select({ challengerId: challenges.challengerId })
+		.from(challenges)
+		.where(eq(challenges.id, challengeId))
+		.limit(1);
+	if (!existing) return { ok: false };
+	if (existing.challengerId === userId) return { ok: false };
+
 	// Claim the challenge atomically: only one accepter can flip status.
 	const claimed = await db
 		.update(challenges)
@@ -87,7 +96,10 @@ export async function acceptChallenge(
 		.returning();
 	const challenge = claimed[0];
 	if (!challenge) return { ok: false };
-	if (challenge.challengerId === userId) return { ok: false };
+	if (challenge.challengerId === userId) {
+		await db.update(challenges).set({ status: 'open' }).where(eq(challenges.id, challengeId));
+		return { ok: false };
+	}
 
 	let whiteId: string | null;
 	let blackId: string | null;
@@ -248,11 +260,12 @@ export async function joinQuickPair(
 				{ gameId, userId: whiteFirst ? userId : entry.userId, color: 'black' as Color }
 			]);
 			await db.update(games).set({ status: 'started' }).where(eq(games.id, gameId));
+			signal?.removeEventListener('abort', onAbort);
 			resolver?.(gameId);
 			return { gameId };
 		}
 	} finally {
-		if (quickPairPool.has(userId) && signal?.aborted) leaveQuickPair(userId);
+		if (signal?.aborted && quickPairPool.has(userId)) leaveQuickPair(userId);
 	}
 
 	if (signal?.aborted) return { gameId: null };
