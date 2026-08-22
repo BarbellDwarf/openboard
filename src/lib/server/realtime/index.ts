@@ -209,6 +209,10 @@ export function injectSocketIO(io: IOServer): void {
 			'game:chat-send',
 			async ({ gameId, body }: { gameId: string; body: string }, ack?: (r: unknown) => void) => {
 				if (!socket.data.userId || !body?.trim()) return ack?.({ ok: false });
+				// Spectators are read-only: only seated players may post.
+				if (!(await playerColorFor(gameId, socket.data.userId))) {
+					return ack?.({ ok: false, reason: 'not-a-player' });
+				}
 				const now = Date.now();
 				while (chatTimes.length > 0 && now - chatTimes[0] > 10_000) chatTimes.shift();
 				if (chatTimes.length >= 5) return ack?.({ ok: false, reason: 'rate-limited' });
