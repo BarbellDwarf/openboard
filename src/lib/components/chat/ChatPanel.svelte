@@ -23,27 +23,34 @@
 	}
 
 	onMount(() => {
+		let offChat: (() => void) | null = null;
 		void (async () => {
 			const socket = await getSocket();
-			socket.on('game:chat', (m: ChatLine) => {
+			const onChat = (m: ChatLine) => {
 				messages = [...messages, m];
 				setTimeout(scrollDown, 20);
-			});
+			};
+			socket.on('game:chat', onChat);
+			offChat = () => socket.off('game:chat', onChat);
 			socket.emit('game:chat-history', { gameId }, (r: { messages: ChatLine[] }) => {
 				messages = r.messages ?? [];
 				setTimeout(scrollDown, 20);
 			});
 		})();
+		return () => offChat?.();
 	});
 
 	async function send(event: SubmitEvent): Promise<void> {
 		event.preventDefault();
 		if (!draft.trim()) return;
 		const socket = await getSocket();
-		socket.timeout(4000).emit('game:chat-send', { gameId, body: draft }, (err: unknown) => {
-			rateLimited = !!err;
-			if (rateLimited) setTimeout(() => (rateLimited = false), 3000);
-		});
+		socket
+			.timeout(4000)
+			.emit('game:chat-send', { gameId, body: draft }, (err: unknown, ack?: { ok?: boolean }) => {
+				// A server-side rejection also arrives as a normal ack with ok:false.
+				rateLimited = !!err || ack?.ok === false;
+				if (rateLimited) setTimeout(() => (rateLimited = false), 3000);
+			});
 		draft = '';
 	}
 </script>
