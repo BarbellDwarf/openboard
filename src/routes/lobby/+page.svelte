@@ -23,9 +23,12 @@
 		return res.json();
 	}
 
+	let shareToken = $state<string | null>(null);
+
 	async function createChallenge(): Promise<void> {
 		busy = true;
-		await post({ action: 'create', colorChoice, days });
+		const r = await post({ action: 'create', colorChoice, days });
+		shareToken = typeof r.challengeToken === 'string' ? r.challengeToken : null;
 		busy = false;
 		await invalidateAll();
 	}
@@ -92,6 +95,11 @@
 				</select>
 			</label>
 		</div>
+		{#if shareToken}
+			<p class="share">
+				Invite link: <code>{`${location.origin}/challenge/${shareToken}`}</code>
+			</p>
+		{/if}
 		<div class="row">
 			<button type="button" class="primary" disabled={busy} onclick={() => void createChallenge()}>
 				Create challenge
@@ -225,5 +233,11 @@
 	select:focus-visible {
 		outline: 2px solid var(--amber);
 		outline-offset: 2px;
+	}
+	.share {
+		margin: 0.25rem 0 0;
+		font-size: 0.85rem;
+		color: var(--lichen);
+		overflow-wrap: anywhere;
 	}
 </style>
