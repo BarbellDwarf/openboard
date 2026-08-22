@@ -160,18 +160,6 @@ export async function persistMove(gameId: string, uci: string): Promise<MovePers
 					})
 				})
 				.where(eq(games.id, gameId));
-
-			if (finished) {
-				await tx
-					.update(games)
-					.set({
-						status: 'finished',
-						result: finished.result,
-						termination: finished.termination,
-						finishedAt: new Date()
-					})
-					.where(eq(games.id, gameId));
-			}
 		});
 	} catch (error) {
 		// Unique violation on (game_id, ply): a concurrent identical move won.
@@ -183,6 +171,16 @@ export async function persistMove(gameId: string, uci: string): Promise<MovePers
 			return { applied: false, reason: 'already-moved' };
 		}
 		throw error;
+	}
+
+	// On-board finishes (mate, stalemate, variant wins, repetition, fifty-move)
+	// finalize through completeGame so rated games get Glicko updates too.
+	if (finished) {
+		try {
+			await completeGame(gameId, finished.result, finished.termination);
+		} catch (error) {
+			console.error('[game] post-move finalize failed:', error);
+		}
 	}
 
 	return { applied: true, finished, state: outcome.state, san: outcome.san };
