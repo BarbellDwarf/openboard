@@ -15,16 +15,53 @@ function evaluate(pos: Position): number {
 	return pos.turn === 'white' ? white : -white;
 }
 
-function materialCount(pos: Position): number {
-	let n = 0;
-	for (const [, piece] of pos.board) {
-		void piece;
-		n++;
-	}
-	return n;
+const MATE = 1_000_000;
+
+const PROMOTABLE = ['queen', 'rook', 'bishop', 'knight', 'pawn'] as const;
+type PocketView = Partial<Record<(typeof PROMOTABLE)[number], number>>;
+
+interface Child {
+	uci: string;
+	pos: Position;
 }
 
-const MATE = 1_000_000;
+/**
+ * Every legal successor including promotions (always queen, good enough for a
+ * shallow search) and, on pocket variants like crazyhouse, drop moves.
+ */
+function childrenOf(pos: Position): Child[] {
+	const out: Child[] = [];
+	const promoBase = pos.turn === 'white' ? 56 : 0;
+	for (const [from, destSet] of pos.allDests().entries()) {
+		const piece = pos.board.get(from);
+		for (const to of destSet) {
+			const promotes = piece?.role === 'pawn' && to >= promoBase && to < promoBase + 8;
+			const move = promotes ? { from, to, promotion: 'queen' as const } : { from, to };
+			if (!pos.isLegal(move)) continue;
+			const child = pos.clone();
+			child.play(move);
+			out.push({ uci: sqName(from) + sqName(to) + (promotes ? 'q' : ''), pos: child });
+		}
+	}
+	const pockets = (pos as unknown as { pockets?: { white?: PocketView; black?: PocketView } })
+		.pockets;
+	const mine = pos.turn === 'white' ? pockets?.white : pockets?.black;
+	const dropDests = (pos as unknown as { dropDests?: () => Iterable<number> }).dropDests;
+	if (mine && typeof dropDests === 'function') {
+		for (const role of PROMOTABLE) {
+			if (!mine[role]) continue;
+			const letter = role[0].toUpperCase();
+			for (const to of dropDests.call(pos)) {
+				const move = { role, to };
+				if (!pos.isLegal(move)) continue;
+				const child = pos.clone();
+				child.play(move);
+				out.push({ uci: `${letter}@${sqName(to)}`, pos: child });
+			}
+		}
+	}
+	return out;
+}
 
 function negamax(pos: Position, depth: number, alpha: number, beta: number): number {
 	const outcome = pos.outcome();
@@ -35,10 +72,8 @@ function negamax(pos: Position, depth: number, alpha: number, beta: number): num
 	if (depth === 0) return evaluate(pos);
 
 	let best = -Infinity;
-	for (const [from, destSet] of pos.allDests().entries()) {
-		for (const to of destSet) {
-			const child = pos.clone();
-			child.play({ from, to });
+	for (const { pos: child } of childrenOf(pos)) {
+		{
 			const score = -negamax(child, depth - 1, -beta, -alpha);
 			if (score > best) best = score;
 			if (best > alpha) alpha = best;
@@ -76,21 +111,17 @@ export function chooseBotMove(variant: string, xfen: string, level: number): str
 	const depth = [0, 1, 1, 2, 2, 3][level] ?? 2;
 	const blunderChance = [0.5, 0.25, 0.12, 0.05, 0][Math.min(level, 4)] ?? 0;
 
-	type Candidate = { from: number; to: number; score: number };
+	type Candidate = { uci: string; score: number };
 	const candidates: Candidate[] = [];
-	for (const [from, destSet] of pos.allDests().entries()) {
-		for (const to of destSet) {
-			const child = pos.clone();
-			child.play({ from, to });
-			const outcome = child.outcome();
-			let score: number;
-			if (outcome?.winner !== undefined) {
-				score = outcome.winner === pos.turn ? MATE : outcome.winner === undefined ? 0 : -MATE;
-			} else {
-				score = -negamax(child, depth - 1, -Infinity, Infinity);
-			}
-			candidates.push({ from, to, score });
+	for (const { uci, pos: child } of childrenOf(pos)) {
+		const outcome = child.outcome();
+		let score: number;
+		if (outcome?.winner !== undefined) {
+			score = outcome.winner === pos.turn ? MATE : outcome.winner === undefined ? 0 : -MATE;
+		} else {
+			score = -negamax(child, depth - 1, -Infinity, Infinity);
 		}
+		candidates.push({ uci, score });
 	}
 	if (candidates.length === 0) return null;
 
@@ -99,10 +130,8 @@ export function chooseBotMove(variant: string, xfen: string, level: number): str
 		// Play a random non-losing-ish move to keep low levels beatable.
 		const pool = candidates.slice(Math.min(3, candidates.length - 1));
 		const pick = pool[Math.floor(Math.random() * pool.length)];
-		return sqName(pick.from) + sqName(pick.to);
+		return pick.uci;
 	}
 	const best = candidates[0];
-	return sqName(best.from) + sqName(best.to);
+	return best.uci;
 }
-
-void materialCount;
