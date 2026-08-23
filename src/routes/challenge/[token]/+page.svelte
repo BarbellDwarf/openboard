@@ -73,8 +73,7 @@
 	</dl>
 
 	{#if !data.signedIn}
-		<a class="primary" href={`/login?returnTo=/challenge/${data.challenge.id}`}>Sign in to accept</a
-		>
+		<a class="primary" href={`/login?returnTo=/challenge/${data.token}`}>Sign in to accept</a>
 	{:else if data.isChallenger}
 		<p class="muted">Waiting for someone to accept.</p>
 	{:else if data.challenge.status !== 'open'}

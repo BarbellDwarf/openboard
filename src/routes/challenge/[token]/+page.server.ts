@@ -8,6 +8,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	if (!challenge) throw error(404, 'Challenge not found.');
 	return {
 		challenge,
+		token: params.token,
 		signedIn: !!locals.user,
 		isChallenger: !!locals.user && locals.user.id === challenge.challengerId
 	};
