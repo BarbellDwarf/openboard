@@ -5,6 +5,17 @@ import type { Socket } from 'socket.io-client';
  * game channel calls so components can await server acknowledgements.
  */
 
+/** How long a game channel call waits for the server's acknowledgement. */
+export const ACK_TIMEOUT_MS = 5_000;
+
+/** Thrown when the server never answers an emitted event within ACK_TIMEOUT_MS. */
+export class AckTimeoutError extends Error {
+	constructor(event: string) {
+		super(`No server acknowledgement for "${event}" within ${ACK_TIMEOUT_MS}ms`);
+		this.name = 'AckTimeoutError';
+	}
+}
+
 let socketPromise: Promise<import('socket.io-client').Socket> | null = null;
 
 export function getSocket(): Promise<Socket> {
@@ -14,9 +25,18 @@ export function getSocket(): Promise<Socket> {
 	return socketPromise;
 }
 
-function emitAck<T>(socket: Socket, event: string, payload: unknown): Promise<T> {
-	return new Promise((resolve) => {
-		socket.emit(event, payload, (response: T) => resolve(response));
+/**
+ * Emit and await the server's ack, bounded by ACK_TIMEOUT_MS so a lost
+ * response surfaces as a rejection instead of hanging the caller forever.
+ * Exported for tests.
+ */
+export function emitAck<T>(socket: Socket, event: string, payload: unknown): Promise<T> {
+	return new Promise((resolve, reject) => {
+		const timer = setTimeout(() => reject(new AckTimeoutError(event)), ACK_TIMEOUT_MS);
+		socket.emit(event, payload, (response: T) => {
+			clearTimeout(timer);
+			resolve(response);
+		});
 	});
 }
 
