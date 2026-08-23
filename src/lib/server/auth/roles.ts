@@ -57,17 +57,32 @@ export async function isAdminUser(userId: string | null | undefined): Promise<bo
 
 /**
  * Flip a freshly created account to admin only while no administrator exists.
- * The NOT EXISTS guard rides inside the UPDATE, so a double-submitted setup
- * form cannot mint two admins through separate accounts. Returns false when
- * another admin won the race; the caller should treat that as "setup closed".
+ * Two guards stack here. The NOT EXISTS predicate keeps the common path in one
+ * statement; under READ COMMITTED two concurrent setups can still both observe
+ * zero admins, so the partial unique index on role='admin' (migration 0002)
+ * settles that race at the storage layer: the losing UPDATE raises 23505 and
+ * is reported as a lost claim. The caller should treat false as
+ * "setup closed".
  */
 export async function promoteToAdmin(userId: string): Promise<boolean> {
-	const updated = await db
-		.update(users)
-		.set({ role: 'admin' })
-		.where(
-			and(eq(users.id, userId), notExists(db.select().from(users).where(eq(users.role, 'admin'))))
-		)
-		.returning({ id: users.id });
-	return updated.length > 0;
+	try {
+		const updated = await db
+			.update(users)
+			.set({ role: 'admin' })
+			.where(
+				and(eq(users.id, userId), notExists(db.select().from(users).where(eq(users.role, 'admin'))))
+			)
+			.returning({ id: users.id });
+		return updated.length > 0;
+	} catch (error) {
+		// Unique violation on the partial admin index: another setup won.
+		if (
+			typeof error === 'object' &&
+			error !== null &&
+			(error as { code?: string }).code === '23505'
+		) {
+			return false;
+		}
+		throw error;
+	}
 }

@@ -19,16 +19,24 @@
 	});
 
 	async function reset(): Promise<void> {
-		const res = await fetch('/api/demo/move', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ xfen: START_XFEN })
-		});
-		if (!res.ok) return;
-		const d = await res.json();
-		demo.xfen = d.xfen;
-		demo.dests = d.dests;
-		demo.last = null;
+		// The board must never jam on a failed reset: fall back to the local
+		// start position so the next cycle can step from it regardless.
+		try {
+			const res = await fetch('/api/demo/move', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ xfen: START_XFEN })
+			});
+			if (!res.ok) throw new Error(`reset failed: ${res.status}`);
+			const d = await res.json();
+			demo.xfen = d.xfen;
+			demo.dests = d.dests;
+			demo.last = null;
+		} catch {
+			demo.xfen = START_XFEN;
+			demo.dests = {};
+			demo.last = null;
+		}
 	}
 
 	async function step(uci: string): Promise<void> {

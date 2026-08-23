@@ -1,4 +1,4 @@
-import { relations } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 import {
 	bigserial,
 	boolean,
@@ -35,7 +35,15 @@ export const users = pgTable(
 		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 		updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
 	},
-	(t) => [uniqueIndex('users_name_key').on(t.name), uniqueIndex('users_email_key').on(t.email)]
+	(t) => [
+		uniqueIndex('users_name_key').on(t.name),
+		uniqueIndex('users_email_key').on(t.email),
+		// Mirrors migration 0002: at most one administrator row may exist.
+		// Declared here so drizzle-kit introspection matches the database.
+		uniqueIndex('users_role_admin_key')
+			.on(t.role)
+			.where(sql`role = 'admin'`)
+	]
 );
 
 export const sessions = pgTable(

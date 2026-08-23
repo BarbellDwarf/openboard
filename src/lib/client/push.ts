@@ -62,14 +62,18 @@ export async function enablePush(): Promise<PushEnableResult> {
 	}
 	if (!publicKey) return { ok: false, reason: 'no-vapid-keys' };
 
-	const permission = await Notification.requestPermission();
-	if (permission !== 'granted') return { ok: false, reason: 'denied' };
-
+	// Register the service worker BEFORE the permission prompt: browsers
+	// require a live registration for subscribe() right after granting, and
+	// dev servers that have not built /sw.js yet fail here instead of after
+	// the user has already accepted the prompt.
 	try {
 		await navigator.serviceWorker.register(SW_URL);
 	} catch {
 		return { ok: false, reason: 'sw-unavailable' };
 	}
+
+	const permission = await Notification.requestPermission();
+	if (permission !== 'granted') return { ok: false, reason: 'denied' };
 
 	try {
 		const reg = await navigator.serviceWorker.ready;

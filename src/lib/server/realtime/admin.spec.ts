@@ -124,6 +124,7 @@ describe('game:admin-close', () => {
 		// Stale handshake snapshot says plain user; the live DB check decides.
 		rolesMock.isAdminUser.mockResolvedValue(true);
 		gameService.loadGame.mockResolvedValue(liveGame('mod-target'));
+		gameService.completeGame.mockResolvedValue(true);
 
 		await connect('mod-1', 'user').trigger('game:admin-close', { gameId: 'mod-target' });
 
@@ -171,6 +172,19 @@ describe('game:admin-close', () => {
 		gameService.completeGame.mockRejectedValue(new Error('db down'));
 
 		await connect('mod-1', 'admin').trigger('game:admin-close', { gameId: 'boom-game' });
+
+		expect(gameService.completeGame).toHaveBeenCalledOnce();
+		expect(broadcasts).toHaveLength(0);
+	});
+
+	it('stays silent when another path wins the atomic finish claim', async () => {
+		// A racing flag sweep or mate claimed the row first; the close must
+		// neither broadcast a second result nor release the room's clock.
+		rolesMock.isAdminUser.mockResolvedValue(true);
+		gameService.loadGame.mockResolvedValue(liveGame('race-game'));
+		gameService.completeGame.mockResolvedValue(false);
+
+		await connect('mod-1', 'admin').trigger('game:admin-close', { gameId: 'race-game' });
 
 		expect(gameService.completeGame).toHaveBeenCalledOnce();
 		expect(broadcasts).toHaveLength(0);

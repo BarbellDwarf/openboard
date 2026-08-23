@@ -89,13 +89,25 @@ type FlagOutcome = 'finished' | 'lost' | 'failed';
 /**
  * Finalize a flagged clock through completeGame and broadcast with the same
  * shape as every other finish. Reachable from moves, joins, and the background
- * sweep so a timed game can never sit started forever.
+ * sweep so a timed game can never sit started forever. When the caller read
+ * the game before checking the clock, pass its lastMoveAtMs: the finish claim
+ * is then guarded on that timestamp, so a move committing as the flag falls
+ * scores the mover's result instead of a stale timeout.
  */
-async function finalizeFlag(gameId: string, flagged: Color): Promise<FlagOutcome> {
+async function finalizeFlag(
+	gameId: string,
+	flagged: Color,
+	read?: { lastMoveAtMs: number }
+): Promise<FlagOutcome> {
 	const winner: ResultValue = flagged === 'white' ? 'black' : 'white';
 	let claimed: boolean;
 	try {
-		claimed = await completeGame(gameId, winner, 'timeout');
+		claimed = await completeGame(
+			gameId,
+			winner,
+			'timeout',
+			read ? { onlyIfLastMoveAt: new Date(read.lastMoveAtMs) } : undefined
+		);
 	} catch (error) {
 		console.error('[realtime] flag finalize failed:', error);
 		return 'failed';
@@ -169,9 +181,13 @@ export function injectSocketIO(io: IOServer): void {
 				}
 				if (room.clock && game.status === 'started') {
 					// Flags are evaluated lazily; a join is a read, so a clock that ran
-					// out while nobody watched ends here.
+					// out while nobody watched ends here. The guard keeps a move that
+					// committed during the read from being scored as a timeout.
 					const flagged = flaggedColor(room.clock, Date.now());
-					if (flagged && (await finalizeFlag(gameId, flagged)) !== 'failed') {
+					if (
+						flagged &&
+						(await finalizeFlag(gameId, flagged, { lastMoveAtMs: game.lastMoveAtMs })) !== 'failed'
+					) {
 						game = (await loadGame(gameId)) ?? game;
 					}
 				}
@@ -235,7 +251,12 @@ export function injectSocketIO(io: IOServer): void {
 				if (room.clock) {
 					const flagged = flaggedColor(room.clock, nowMs);
 					if (flagged) {
-						const outcome = await finalizeFlag(gameId, flagged);
+						// Guarded on the just-read lastMoveAtMs: if the player's move
+						// commits while we finalize, the timeout claim loses and the
+						// mover's own finish path owns the broadcast.
+						const outcome = await finalizeFlag(gameId, flagged, {
+							lastMoveAtMs: game.lastMoveAtMs
+						});
 						if (outcome === 'failed') {
 							return ack?.({ ok: false, reason: 'internal-error' });
 						}
@@ -323,12 +344,17 @@ export function injectSocketIO(io: IOServer): void {
 			if (!color) return;
 			const game = await loadGame(gameId);
 			if (!game || game.status !== 'started') return;
+			let claimed: boolean;
 			try {
-				await completeGame(gameId, color === 'white' ? 'black' : 'white', 'resignation');
+				claimed = await completeGame(gameId, color === 'white' ? 'black' : 'white', 'resignation');
 			} catch (error) {
 				console.error('[realtime] resignation finalize failed:', error);
 				return;
 			}
+			// Lost the atomic claim: a racing flag sweep or mate already finished
+			// this game and owns the result broadcast. Emitting here would send a
+			// second, conflicting payload into the room.
+			if (!claimed) return;
 			const room = rooms.get(gameId);
 			if (room) room.clock = undefined;
 			io.to(`game:${gameId}`).emit('game:over', {
@@ -345,12 +371,16 @@ export function injectSocketIO(io: IOServer): void {
 			if (!(await isAdminUser(socket.data.userId))) return;
 			const game = await loadGame(gameId);
 			if (!game || game.status !== 'started') return;
+			let claimed: boolean;
 			try {
-				await completeGame(gameId, 'draw', 'admin-closed');
+				claimed = await completeGame(gameId, 'draw', 'admin-closed');
 			} catch (error) {
 				console.error('[realtime] admin close finalize failed:', error);
 				return;
 			}
+			// Lost the atomic claim: the game finished through another path, which
+			// owns both the result broadcast and the clock release.
+			if (!claimed) return;
 			const room = rooms.get(gameId);
 			if (room) room.clock = undefined;
 			io.to(`game:${gameId}`).emit('game:over', { result: 'draw', termination: 'admin-closed' });
@@ -381,12 +411,16 @@ export function injectSocketIO(io: IOServer): void {
 			const game = await loadGame(gameId);
 			if (!game || game.status !== 'started') return;
 			room.drawOfferedBy = undefined;
+			let claimed: boolean;
 			try {
-				await completeGame(gameId, 'draw', 'agreement');
+				claimed = await completeGame(gameId, 'draw', 'agreement');
 			} catch (error) {
 				console.error('[realtime] draw finalize failed:', error);
 				return;
 			}
+			// Lost the atomic claim: the game finished through another path, which
+			// owns both the result broadcast and the clock release.
+			if (!claimed) return;
 			room.clock = undefined;
 			io.to(`game:${gameId}`).emit('game:over', { result: 'draw', termination: 'agreement' });
 		});

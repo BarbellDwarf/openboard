@@ -175,11 +175,16 @@ export async function persistMove(gameId: string, uci: string): Promise<MovePers
 
 	// On-board finishes (mate, stalemate, variant wins, repetition, fifty-move)
 	// finalize through completeGame so rated games get Glicko updates too.
+	// When the claim is lost or throws, another path finished this game and owns
+	// the result: report the move as unfinished so callers never broadcast a
+	// conflicting outcome on top of the settled one.
 	if (finished) {
 		try {
-			await completeGame(gameId, finished.result, finished.termination);
+			const claimed = await completeGame(gameId, finished.result, finished.termination);
+			if (!claimed) finished = null;
 		} catch (error) {
 			console.error('[game] post-move finalize failed:', error);
+			finished = null;
 		}
 	}
 

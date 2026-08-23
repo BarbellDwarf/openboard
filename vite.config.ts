@@ -42,7 +42,39 @@ export default defineConfig({
 			srcDir: 'src/service-worker',
 			filename: 'sw.ts',
 			registerType: 'prompt',
-			injectRegister: null
+			injectRegister: null,
+			// OpenBoard branding for the install prompt and OS surfaces. Amber
+			// (#e8a33d from the clubroom tokens) is the accent used on buttons and
+			// focus rings; baize (#0f1b14) is the app's base surface colour.
+			manifest: {
+				name: 'OpenBoard',
+				short_name: 'OpenBoard',
+				description:
+					'A self-hostable online chess platform. Live games, long-running correspondence games, rated play with leaderboards, chat, and full support for chess variants.',
+				lang: 'en',
+				start_url: '/',
+				scope: '/',
+				display: 'standalone',
+				background_color: '#0f1b14',
+				theme_color: '#e8a33d',
+				categories: ['games'],
+				icons: [
+					{ src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+					{ src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+					{
+						src: '/icons/icon-maskable-192.png',
+						sizes: '192x192',
+						type: 'image/png',
+						purpose: 'maskable'
+					},
+					{
+						src: '/icons/icon-maskable-512.png',
+						sizes: '512x512',
+						type: 'image/png',
+						purpose: 'maskable'
+					}
+				]
+			}
 		})
 	],
 	test: {

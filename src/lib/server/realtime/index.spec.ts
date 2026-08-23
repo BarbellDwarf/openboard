@@ -146,7 +146,10 @@ describe('lazy flag finalization', () => {
 
 		vi.setSystemTime(t0 + 61_000);
 		const second = await request(connect('user-b'), 'game:join', { gameId: 'flag-join' });
-		expect(gameService.completeGame).toHaveBeenCalledWith('flag-join', 'black', 'timeout');
+		// The join path guards the claim on the last move it read.
+		expect(gameService.completeGame).toHaveBeenCalledWith('flag-join', 'black', 'timeout', {
+			onlyIfLastMoveAt: new Date(0)
+		});
 		expect(second.game).toMatchObject({ status: 'finished', result: 'black' });
 		expect(broadcasts).toContainEqual({
 			room: 'game:flag-join',
@@ -164,7 +167,13 @@ describe('lazy flag finalization', () => {
 
 		vi.setSystemTime(t0 + 61_000);
 		await expect(sweepFlaggedRooms()).resolves.toBe(1);
-		expect(gameService.completeGame).toHaveBeenCalledWith('flag-sweep', 'black', 'timeout');
+		// The background sweep holds no pre-read timestamp, so it claims unguarded.
+		expect(gameService.completeGame).toHaveBeenCalledWith(
+			'flag-sweep',
+			'black',
+			'timeout',
+			undefined
+		);
 		const overs = broadcasts.filter((b) => b.room === 'game:flag-sweep' && b.event === 'game:over');
 		expect(overs).toHaveLength(1);
 	});
@@ -226,5 +235,102 @@ describe('draw offers', () => {
 			event: 'game:draw-offered',
 			payload: { by: 'white' }
 		});
+	});
+});
+
+describe('finish claims', () => {
+	function overs(room: string): Broadcast[] {
+		return broadcasts.filter((b) => b.room === `game:${room}` && b.event === 'game:over');
+	}
+
+	it('broadcasts a resignation that wins the atomic claim', async () => {
+		vi.setSystemTime(4_000_000_000);
+		gameService.loadGame.mockResolvedValue(liveGame('resign-win'));
+		await request(connect(), 'game:join', { gameId: 'resign-win' });
+
+		gameService.playerColorFor.mockResolvedValue('white');
+		gameService.completeGame.mockResolvedValue(true);
+		await connect('user-w').trigger('game:resign', { gameId: 'resign-win' });
+
+		expect(gameService.completeGame).toHaveBeenCalledWith('resign-win', 'black', 'resignation');
+		expect(overs('resign-win')).toEqual([
+			{
+				room: 'game:resign-win',
+				event: 'game:over',
+				payload: { result: 'black', termination: 'resignation' }
+			}
+		]);
+		// Winning the claim releases the clock for eviction.
+		expect(evictIdleRooms(Number.MAX_SAFE_INTEGER)).toBe(1);
+	});
+
+	it('stays silent when a resignation loses the claim to a racing finish', async () => {
+		vi.setSystemTime(4_100_000_000);
+		gameService.loadGame.mockResolvedValue(liveGame('resign-race'));
+		await request(connect(), 'game:join', { gameId: 'resign-race' });
+
+		gameService.playerColorFor.mockResolvedValue('white');
+		gameService.completeGame.mockResolvedValue(false);
+		await connect('user-w').trigger('game:resign', { gameId: 'resign-race' });
+
+		expect(gameService.completeGame).toHaveBeenCalledWith('resign-race', 'black', 'resignation');
+		expect(overs('resign-race')).toHaveLength(0);
+		// The other path owns the finish, so it also owns the clock release.
+		expect(evictIdleRooms(Number.MAX_SAFE_INTEGER)).toBe(0);
+	});
+
+	it('stays silent when an accepted draw loses the claim', async () => {
+		gameService.playerColorFor.mockResolvedValue('white');
+		gameService.loadGame.mockResolvedValue(liveGame('draw-race'));
+		await connect('user-w').trigger('game:draw-offer', { gameId: 'draw-race' });
+
+		gameService.playerColorFor.mockResolvedValue('black');
+		gameService.completeGame.mockResolvedValue(false);
+		await connect('user-b').trigger('game:draw-accept', { gameId: 'draw-race' });
+
+		expect(gameService.completeGame).toHaveBeenCalledWith('draw-race', 'draw', 'agreement');
+		expect(overs('draw-race')).toHaveLength(0);
+	});
+
+	it('broadcasts an accepted draw that wins the claim', async () => {
+		gameService.playerColorFor.mockResolvedValue('white');
+		gameService.loadGame.mockResolvedValue(liveGame('draw-win'));
+		await connect('user-w').trigger('game:draw-offer', { gameId: 'draw-win' });
+
+		gameService.playerColorFor.mockResolvedValue('black');
+		gameService.completeGame.mockResolvedValue(true);
+		await connect('user-b').trigger('game:draw-accept', { gameId: 'draw-win' });
+
+		expect(overs('draw-win')).toEqual([
+			{
+				room: 'game:draw-win',
+				event: 'game:over',
+				payload: { result: 'draw', termination: 'agreement' }
+			}
+		]);
+	});
+
+	it('guards flag finalization on the last move the caller read', async () => {
+		const t0 = 4_200_000_000;
+		vi.setSystemTime(t0);
+		gameService.completeGame.mockResolvedValue(true);
+		gameService.playerColorFor.mockResolvedValue('white');
+		const game = liveGame('flag-guard', { state: { xfen: START_XFEN, turn: 'white' } });
+		gameService.loadGame.mockResolvedValue(game);
+
+		await request(connect(), 'game:join', { gameId: 'flag-guard' });
+		expect(gameService.completeGame).not.toHaveBeenCalled();
+
+		vi.setSystemTime(t0 + 61_000);
+		const moved = await request(connect('user-w'), 'game:move', {
+			gameId: 'flag-guard',
+			uci: 'e2e4'
+		});
+		// The timeout claim rides with the timestamp the handler read, so a
+		// move committing mid-finalize invalidates it instead of double-scoring.
+		expect(gameService.completeGame).toHaveBeenCalledWith('flag-guard', 'black', 'timeout', {
+			onlyIfLastMoveAt: new Date(0)
+		});
+		expect(moved).toEqual({ ok: false, reason: 'flag-fell' });
 	});
 });

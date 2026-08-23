@@ -14,7 +14,8 @@ export const OPTIONS: RequestHandler = async () => {
 /**
  * Subscribe: upsert by endpoint. Also reports the VAPID public key.
  * The conflict update is scoped to rows the caller already owns, so one user
- * can never take over another user's subscription by replaying their endpoint.
+ * can never take over another user's subscription by replaying their endpoint:
+ * a replay matching zero owned rows stores nothing and answers 403.
  */
 export const POST: RequestHandler = async ({ request, locals }) => {
 	if (!locals.user) return json({ ok: false }, { status: 401 });
@@ -25,7 +26,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	if (!body.endpoint || !body.keys?.p256dh || !body.keys?.auth) {
 		return json({ ok: false }, { status: 422 });
 	}
-	await db
+	const stored = await db
 		.insert(pushSubscriptions)
 		.values({
 			userId: locals.user.id,
@@ -45,7 +46,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 				auth: body.keys.auth,
 				lastUsedAt: new Date()
 			}
-		});
+		})
+		.returning({ id: pushSubscriptions.id });
+	if (stored.length === 0) return json({ ok: false }, { status: 403 });
 	return json({ ok: true, publicKey: vapidPublicKey() });
 };
 

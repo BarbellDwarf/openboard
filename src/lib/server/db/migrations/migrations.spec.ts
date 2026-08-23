@@ -43,4 +43,11 @@ describe('migration sql', () => {
 		expect(sql).toContain("DEFAULT 'user'");
 		expect(sql).toContain('NOT NULL');
 	});
+
+	it('adds the partial unique index that caps administrators at one', async () => {
+		const sql = await readFile(path.join(MIGRATIONS_DIR, '0002_users_admin_key.sql'), 'utf8');
+		expect(sql).toContain('CREATE UNIQUE INDEX IF NOT EXISTS "users_role_admin_key"');
+		expect(sql).toContain('ON "users"');
+		expect(sql).toContain(`WHERE "role" = 'admin'`);
+	});
 });

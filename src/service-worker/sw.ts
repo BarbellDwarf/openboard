@@ -39,8 +39,10 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
 	event.notification.close();
 	const raw = (event.notification.data as { url?: string })?.url ?? '/';
-	// Resolve against our origin, then match windows exactly: a bare '/' must
-	// only focus a window that IS the home page, never any other window.
+	// Resolve against our origin, then match windows on origin + pathname:
+	// a bare '/' must only focus a window that IS the home page, never any
+	// other window, while query strings must not block a match ('/?ref=x'
+	// should focus an existing home tab).
 	let target: URL;
 	try {
 		target = new URL(raw, self.location.origin);
@@ -51,7 +53,13 @@ self.addEventListener('notificationclick', (event) => {
 		(async () => {
 			const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
 			for (const client of windows) {
-				if (client.url === target.href) {
+				let parsed: URL;
+				try {
+					parsed = new URL(client.url);
+				} catch {
+					continue;
+				}
+				if (parsed.origin === target.origin && parsed.pathname === target.pathname) {
 					await client.focus();
 					return;
 				}
