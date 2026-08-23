@@ -11,7 +11,11 @@ export const OPTIONS: RequestHandler = async () => {
 	return json({ publicKey: vapidPublicKey() });
 };
 
-/** Subscribe: upsert by endpoint. Also reports the VAPID public key. */
+/**
+ * Subscribe: upsert by endpoint. Also reports the VAPID public key.
+ * The conflict update is scoped to rows the caller already owns, so one user
+ * can never take over another user's subscription by replaying their endpoint.
+ */
 export const POST: RequestHandler = async ({ request, locals }) => {
 	if (!locals.user) return json({ ok: false }, { status: 401 });
 	const body = (await request.json()) as {
@@ -32,8 +36,11 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		})
 		.onConflictDoUpdate({
 			target: pushSubscriptions.endpoint,
+			setWhere: and(
+				eq(pushSubscriptions.endpoint, body.endpoint),
+				eq(pushSubscriptions.userId, locals.user.id)
+			),
 			set: {
-				userId: locals.user.id,
 				p256dh: body.keys.p256dh,
 				auth: body.keys.auth,
 				lastUsedAt: new Date()

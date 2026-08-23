@@ -1,4 +1,4 @@
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 
 import { db } from '$lib/server/db';
 import { games, moves as movesTable, users } from '$lib/server/db/schema';
@@ -189,48 +189,49 @@ export async function persistMove(gameId: string, uci: string): Promise<MovePers
 import { applyRatedResult } from '$lib/server/ratings/service';
 import { speedClassFor } from './types';
 
-/** Finish a game and, when rated, apply Glicko-2 updates. */
+/**
+ * Finish a game and, when rated, apply Glicko-2 updates. Returns true when
+ * this call claimed the finish. The claim is a single conditional UPDATE:
+ * status flips started -> finished only while the row is still running and,
+ * when guarded, unmoved since the caller read it. Concurrent finishes race on
+ * that one statement, so exactly one of them reaches the rating step.
+ */
 export async function completeGame(
 	gameId: string,
 	result: ResultValue,
 	termination: Termination,
 	opts?: { onlyIfLastMoveAt?: Date }
-): Promise<void> {
-	const [game] = await db.select().from(games).where(eq(games.id, gameId)).limit(1);
-	if (!game || game.status !== 'started') return;
-	// Optimistic guard: bail when the game moved after the caller looked.
-	const guardMs = opts?.onlyIfLastMoveAt?.getTime();
-	if (
-		guardMs !== undefined &&
-		(game.lastMoveAt ? new Date(game.lastMoveAt).getTime() : null) !== guardMs
-	) {
-		return;
-	}
-	await finishGame(gameId, result, termination);
-	if (!game.rated) return;
-	await applyRatedResult({
-		gameId,
-		variant: game.variant as VariantId,
-		speed: speedClassFor({
-			initialMs: game.initialMs,
-			incrementMs: game.incrementMs,
-			daysPerMove: game.daysPerMove
-		}),
-		result,
-		whiteId: game.whiteId,
-		blackId: game.blackId
-	});
-}
-
-export async function finishGame(
-	gameId: string,
-	result: ResultValue,
-	termination: Termination
-): Promise<void> {
-	await db
+): Promise<boolean> {
+	const claim = [eq(games.id, gameId), eq(games.status, 'started')];
+	if (opts?.onlyIfLastMoveAt) claim.push(eq(games.lastMoveAt, opts.onlyIfLastMoveAt));
+	const [claimed] = await db
 		.update(games)
 		.set({ status: 'finished', result, termination, finishedAt: new Date() })
-		.where(eq(games.id, gameId));
+		.where(and(...claim))
+		.returning({
+			rated: games.rated,
+			variant: games.variant,
+			initialMs: games.initialMs,
+			incrementMs: games.incrementMs,
+			daysPerMove: games.daysPerMove,
+			whiteId: games.whiteId,
+			blackId: games.blackId
+		});
+	if (!claimed) return false;
+	if (!claimed.rated) return true;
+	await applyRatedResult({
+		gameId,
+		variant: claimed.variant as VariantId,
+		speed: speedClassFor({
+			initialMs: claimed.initialMs,
+			incrementMs: claimed.incrementMs,
+			daysPerMove: claimed.daysPerMove
+		}),
+		result,
+		whiteId: claimed.whiteId,
+		blackId: claimed.blackId
+	});
+	return true;
 }
 
 export async function abortGame(gameId: string): Promise<void> {
