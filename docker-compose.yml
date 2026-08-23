@@ -5,7 +5,11 @@ services:
       - '3000:3000'
     environment:
       DATABASE_URL: postgres://openboard:openboard@db:5432/openboard
-      ORIGIN: http://localhost:3000
+      # Required. Compose fails fast with this message when the variable is
+      # missing, so put it in .env before running docker compose up.
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET in .env}
+      # Public URL of the deployment. Override in .env when not on localhost.
+      ORIGIN: ${ORIGIN:-http://localhost:3000}
     depends_on:
       db:
         condition: service_healthy
