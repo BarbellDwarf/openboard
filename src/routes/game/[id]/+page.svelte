@@ -4,6 +4,7 @@
 	import { page } from '$app/state';
 	import Board from '$lib/components/board/Board.svelte';
 	import ChatPanel from '$lib/components/chat/ChatPanel.svelte';
+	import { isDropUci } from '$lib/components/board/pockets';
 	import { gameChannel, getSocket, type JoinResponse } from '$lib/client/socket';
 	import type { DestMap } from '$lib/server/chess/types';
 
@@ -29,6 +30,8 @@
 	let info = $state<GameInfo | null>(null);
 	let xfen = $state('');
 	let dests = $state<DestMap>({});
+	/** Pocket holdings for crazyhouse games; null otherwise. */
+	let pockets = $state<Record<string, number> | null>(null);
 	let sanMoves = $state<string[]>([]);
 	let lastMove = $state<[string, string] | null>(null);
 	let checkSquare = $state<string | null>(null);
@@ -100,10 +103,14 @@
 
 	async function applyServerMove(payload: Record<string, unknown>): Promise<void> {
 		sanMoves = [...sanMoves, String(payload.san)];
-		lastMove = [String(payload.uci).slice(0, 2), String(payload.uci).slice(2, 4)];
+		const uci = String(payload.uci);
+		lastMove = isDropUci(uci)
+			? [uci.slice(2, 4), uci.slice(2, 4)]
+			: [uci.slice(0, 2), uci.slice(2, 4)];
 		const st = payload.state as Record<string, unknown>;
 		xfen = String(st.xfen);
 		dests = st.dests as DestMap;
+		pockets = (st.pockets as Record<string, number> | undefined) ?? null;
 		checkSquare = st.inCheck ? findKing(st.xfen as string) : null;
 		if (payload.clock) {
 			clock = payload.clock as typeof clock;
@@ -146,6 +153,7 @@
 			}
 			xfen = String(join.state.xfen);
 			dests = (join.state.dests as DestMap) ?? {};
+			pockets = (join.state.pockets as Record<string, number> | undefined) ?? null;
 			sanMoves = join.sanMoves ?? [];
 			clock = join.clock ?? null;
 			clockAt = Date.now();
@@ -228,6 +236,8 @@
 				{lastMove}
 				{checkSquare}
 				{orientation}
+				variant={info.variant}
+				{pockets}
 				interactive={!!yourTurn}
 				onMove={(uci) => void onMove(uci)}
 			/>
