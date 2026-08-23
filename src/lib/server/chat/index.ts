@@ -26,11 +26,23 @@ export async function addMessage(gameId: string, userId: string, body: string): 
 	return row.id;
 }
 
-export async function softDelete(id: number, userId: string): Promise<boolean> {
+/**
+ * Soft-delete one message. Authors may remove their own; passing { admin }
+ * lets an administrator remove anyone's. Unknown ids and messages the caller
+ * may not touch both return false, so the two failures stay indistinguishable.
+ */
+export async function softDelete(
+	id: number,
+	userId: string,
+	opts: { admin?: boolean } = {}
+): Promise<boolean> {
+	const claim = opts.admin
+		? eq(chatMessages.id, id)
+		: and(eq(chatMessages.id, id), eq(chatMessages.userId, userId));
 	const rows = await db
 		.update(chatMessages)
 		.set({ deletedAt: new Date() })
-		.where(and(eq(chatMessages.id, id), eq(chatMessages.userId, userId)))
+		.where(claim)
 		.returning({ id: chatMessages.id });
 	return rows.length > 0;
 }

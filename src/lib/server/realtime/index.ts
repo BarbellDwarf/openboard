@@ -17,6 +17,7 @@ import {
 	playerColorFor
 } from '../chess/game-service';
 import { getSessionFromCookieHeader } from '../auth/session';
+import { isAdminUser } from '../auth/roles';
 import { startSweeper } from '../correspondence';
 import { notifyUser } from '../notifications';
 import { addMessage, historyFor } from '../chat';
@@ -128,6 +129,9 @@ export function injectSocketIO(io: IOServer): void {
 			if (session) {
 				const { playerName } = await import('../chess/game-service');
 				socket.data.userName = await playerName(session.userId);
+				// The snapshot only feeds client affordances; privileged handlers
+				// re-verify the role against the database at action time.
+				socket.data.userRole = (await isAdminUser(session.userId)) ? 'admin' : 'user';
 			}
 			next();
 		} catch {
@@ -194,7 +198,9 @@ export function injectSocketIO(io: IOServer): void {
 					state: game.state,
 					sanMoves: game.sanMoves,
 					clock: clockView(room, Date.now()),
-					deadline
+					deadline,
+					// Display-only affordance flag; enforcement stays server-side.
+					youAreAdmin: socket.data.userRole === 'admin'
 				});
 			}
 		);
@@ -329,6 +335,25 @@ export function injectSocketIO(io: IOServer): void {
 				result: color === 'white' ? 'black' : 'white',
 				termination: 'resignation'
 			});
+		});
+
+		// Moderation: an administrator may close any running game. It finalizes
+		// as a draw so nobody farms rating from an admin action. The role check
+		// hits the database live; the handshake snapshot is display-only.
+		socket.on('game:admin-close', async ({ gameId }: { gameId: string }) => {
+			if (!socket.data.userId) return;
+			if (!(await isAdminUser(socket.data.userId))) return;
+			const game = await loadGame(gameId);
+			if (!game || game.status !== 'started') return;
+			try {
+				await completeGame(gameId, 'draw', 'admin-closed');
+			} catch (error) {
+				console.error('[realtime] admin close finalize failed:', error);
+				return;
+			}
+			const room = rooms.get(gameId);
+			if (room) room.clock = undefined;
+			io.to(`game:${gameId}`).emit('game:over', { result: 'draw', termination: 'admin-closed' });
 		});
 
 		socket.on('game:draw-offer', async ({ gameId }: { gameId: string }) => {

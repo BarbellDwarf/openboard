@@ -23,7 +23,8 @@ const SERVER_TOKENS: Termination[] = [
 	'threecheck',
 	'atomic-king-death',
 	'horde-wiped',
-	'racingkings-finish'
+	'racingkings-finish',
+	'admin-closed'
 ];
 
 describe('termination copy', () => {
@@ -39,10 +40,12 @@ describe('termination copy', () => {
 		expect(terminationLabel('atomic-king-death')).toBe('King exploded');
 		expect(terminationLabel('horde-wiped')).toBe('Horde destroyed');
 		expect(terminationLabel('racingkings-finish')).toBe('Race finished');
+		expect(terminationLabel('admin-closed')).toBe('Closed by a moderator');
 		expect(terminationPhrase('insufficient')).toBe('insufficient material');
 		expect(terminationPhrase('atomic-king-death')).toBe('king exploded');
 		expect(terminationPhrase('horde-wiped')).toBe('horde wiped out');
 		expect(terminationPhrase('racingkings-finish')).toBe('race finished');
+		expect(terminationPhrase('admin-closed')).toBe('closed by a moderator');
 	});
 
 	it('renders unknown tokens as-is', () => {

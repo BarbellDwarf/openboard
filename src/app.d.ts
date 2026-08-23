@@ -5,6 +5,8 @@ declare global {
 	interface SocketData {
 		userId?: string;
 		userName?: string;
+		/** Handshake-time snapshot for client affordances; never authoritative. */
+		userRole?: string;
 	}
 	namespace App {
 		interface Locals {

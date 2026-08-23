@@ -43,6 +43,7 @@
 	let nowMs = $state<number>(Date.now());
 	let deadline = $state<number | null>(null);
 	let incomingDrawForYou = $state(false);
+	let amAdmin = $state(false);
 	let over = $state<{ result: string; termination: string } | null>(null);
 	let rematchReadyTo = $state<string | null>(null);
 	let loadError = $state(false);
@@ -125,6 +126,7 @@
 	function hydrateFromJoin(join: JoinResponse): boolean {
 		if (!join.ok || !join.game || !join.state) return false;
 		info = join.game as unknown as GameInfo;
+		amAdmin = !!join.youAreAdmin;
 		if (info.status === 'finished' && info.result) {
 			over = { result: String(info.result), termination: String(info.termination ?? '') };
 		}
@@ -314,6 +316,10 @@
 					{:else}
 						<button type="button" onclick={() => gameChannel.offerDraw(gameId)}>Offer draw</button>
 					{/if}
+				{/if}
+				{#if info.status === 'started' && amAdmin}
+					<!-- Display-only affordance: the server re-checks the role. -->
+					<button type="button" onclick={() => gameChannel.adminClose(gameId)}>Close game</button>
 				{/if}
 				{#if over}
 					<div class="result" role="status">

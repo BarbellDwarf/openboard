@@ -28,6 +28,8 @@ export const users = pgTable(
 		id: uuid('id').defaultRandom().primaryKey(),
 		name: text('name').notNull(),
 		email: text('email').notNull(),
+		/** 'admin' unlocks moderation powers; every other value is a plain user. */
+		role: text('role').default('user').notNull(),
 		emailVerified: boolean('email_verified').default(false).notNull(),
 		image: text('image'),
 		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
@@ -124,7 +126,7 @@ export const games = pgTable(
 		/**
 		 * checkmate | stalemate | resignation | timeout | abandoned | agreement |
 		 * kingofthehill | threecheck | atomic-king-death | horde-wiped |
-		 * racingkings-finish | insufficient
+		 * racingkings-finish | insufficient | admin-closed
 		 */
 		termination: text('termination'),
 		currentXfen: text('current_xfen'),

@@ -21,7 +21,8 @@ export const TERMINATION_LABELS: Record<Termination, string> = {
 	threecheck: 'Third check given',
 	'atomic-king-death': 'King exploded',
 	'horde-wiped': 'Horde destroyed',
-	'racingkings-finish': 'Race finished'
+	'racingkings-finish': 'Race finished',
+	'admin-closed': 'Closed by a moderator'
 };
 
 /** Lowercase phrases that slot into sentences like "White won by ...". */
@@ -39,7 +40,8 @@ export const TERMINATION_PHRASES: Record<Termination, string> = {
 	threecheck: 'third check given',
 	'atomic-king-death': 'king exploded',
 	'horde-wiped': 'horde wiped out',
-	'racingkings-finish': 'race finished'
+	'racingkings-finish': 'race finished',
+	'admin-closed': 'closed by a moderator'
 };
 
 /** Label for a termination token; unknown tokens render as-is. */

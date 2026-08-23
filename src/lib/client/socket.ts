@@ -47,6 +47,8 @@ export interface JoinResponse {
 	sanMoves?: string[];
 	clock?: { whiteMs: number; blackMs: number; ticking: string | null } | null;
 	deadline?: number | null;
+	/** Display-only: whether the joining user holds the admin role. */
+	youAreAdmin?: boolean;
 }
 
 export const gameChannel = {
@@ -61,6 +63,10 @@ export const gameChannel = {
 	async resign(gameId: string): Promise<void> {
 		const socket = await getSocket();
 		socket.emit('game:resign', { gameId });
+	},
+	async adminClose(gameId: string): Promise<void> {
+		const socket = await getSocket();
+		socket.emit('game:admin-close', { gameId });
 	},
 	async offerDraw(gameId: string): Promise<void> {
 		const socket = await getSocket();

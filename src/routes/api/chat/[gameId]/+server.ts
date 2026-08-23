@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 
 import { addMessage, historyFor, softDelete } from '$lib/server/chat';
 import { playerColorFor } from '$lib/server/chess/game-service';
+import { isAdminUser } from '$lib/server/auth/roles';
 import type { RequestHandler } from './$types';
 
 /** Same limits as the realtime path: five messages per ten seconds per user. */
@@ -23,7 +24,9 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 	if (!locals.user) return json({ ok: false }, { status: 401 });
 	const body = (await request.json()) as { body?: string; deleteId?: number };
 	if (body.deleteId != null) {
-		const ok = await softDelete(body.deleteId, locals.user.id);
+		// Authors delete their own messages; administrators moderate any of them.
+		const admin = await isAdminUser(locals.user.id);
+		const ok = await softDelete(body.deleteId, locals.user.id, { admin });
 		return json({ ok });
 	}
 	// Only seated players may post; spectators stay read-only.

@@ -32,6 +32,18 @@ docker compose up -d
 
 The application listens on port 3000 by default. Configuration happens through environment variables documented in the deployment guide.
 
+On first boot, open `/setup` in a browser to create the administrator account. The wizard stays available until an administrator exists, then closes permanently; existing deployments upgraded from earlier builds keep access to it as a recovery path until they have one.
+
+## Administration
+
+The first account created through `/setup` holds the `admin` role. Administrators can:
+
+- Close any running game. The game finalizes as a draw marked "closed by a moderator".
+- Delete any chat message. Authors can always delete their own messages.
+- View the member roster at `/admin/users`, listing names, emails, roles, and join dates.
+
+Every moderation power is enforced on the server. Roles live in the `users.role` column and default to `user`.
+
 ## Tech stack
 
 - SvelteKit (Svelte 5) frontend with server-side rendering
