@@ -6,7 +6,7 @@ Initial release.
 
 - Accounts with email and password, plus generic OIDC sign-in for Authentik and Authelia.
 - Live games over WebSockets: bullet, blitz, rapid, classical clocks.
-- Correspondence games with days-per-move deadlines and reminders.
+- Correspondence games with days-per-move deadline display and automatic loss on flag.
 - Eight rulesets: standard, Chess960, Crazyhouse, King of the Hill, Three-check, Atomic, Horde, Racing Kings. Server-authoritative validation throughout.
 - Glicko-2 ratings per variant per speed class, with public leaderboards.
 - Challenges and a quick-pairing pool.

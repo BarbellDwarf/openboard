@@ -1,6 +1,6 @@
 import { Server as IOServer, type Socket } from 'socket.io';
 
-import type { Color } from '../chess/types';
+import type { Color, ResultValue } from '../chess/types';
 import type { LiveClock } from '../chess/clocks';
 import {
 	applyMoveToClock,
@@ -21,6 +21,9 @@ import { startSweeper } from '../correspondence';
 import { notifyUser } from '../notifications';
 import { addMessage, historyFor } from '../chat';
 
+/** Production shutdown hook: closes the pg pool owned by $lib/server/db. */
+export { closePool } from '$lib/server/db';
+
 /**
  * Realtime gateway. One Socket.IO room per game; every state change is
  * computed server-side and broadcast to the room. The handshake authenticates
@@ -28,6 +31,9 @@ import { addMessage, historyFor } from '../chat';
  */
 
 let backgroundJobsStarted = false;
+
+/** Captured by injectSocketIO so background sweeps can broadcast finishes. */
+let ioRef: IOServer | null = null;
 
 interface RoomState {
 	clock?: LiveClock;
@@ -73,7 +79,48 @@ function clockView(room: RoomState, nowMs: number) {
 	};
 }
 
+/**
+ * Outcome of a flag finalization attempt. completeGame's atomic claim decides
+ * between the racers; 'lost' means another path already finished the game.
+ */
+type FlagOutcome = 'finished' | 'lost' | 'failed';
+
+/**
+ * Finalize a flagged clock through completeGame and broadcast with the same
+ * shape as every other finish. Reachable from moves, joins, and the background
+ * sweep so a timed game can never sit started forever.
+ */
+async function finalizeFlag(gameId: string, flagged: Color): Promise<FlagOutcome> {
+	const winner: ResultValue = flagged === 'white' ? 'black' : 'white';
+	let claimed: boolean;
+	try {
+		claimed = await completeGame(gameId, winner, 'timeout');
+	} catch (error) {
+		console.error('[realtime] flag finalize failed:', error);
+		return 'failed';
+	}
+	if (!claimed) return 'lost';
+	// The game is over: release its clock so idle eviction can reclaim the room.
+	const room = rooms.get(gameId);
+	if (room) room.clock = undefined;
+	ioRef?.to(`game:${gameId}`).emit('game:over', { result: winner, termination: 'timeout' });
+	return 'finished';
+}
+
+/** Safety net for timed games nobody is watching: finalize every fallen flag. */
+export async function sweepFlaggedRooms(nowMs: number = Date.now()): Promise<number> {
+	let finalized = 0;
+	for (const [gameId, room] of rooms) {
+		if (!room.clock) continue;
+		const flagged = flaggedColor(room.clock, nowMs);
+		if (!flagged) continue;
+		if ((await finalizeFlag(gameId, flagged)) === 'finished') finalized++;
+	}
+	return finalized;
+}
+
 export function injectSocketIO(io: IOServer): void {
+	ioRef = io;
 	io.use(async (socket, next) => {
 		try {
 			const session = await getSessionFromCookieHeader(socket.request.headers.cookie);
@@ -103,17 +150,26 @@ export function injectSocketIO(io: IOServer): void {
 		socket.on(
 			'game:join',
 			async ({ gameId }: { gameId: string }, ack?: (response: unknown) => void) => {
-				const game = await loadGame(gameId);
+				let game = await loadGame(gameId);
 				if (!game) return ack?.({ ok: false });
 				const room = roomFor(gameId);
 				if (game.timeControl.initialMs != null && !room.clock && game.status === 'started') {
-					// Resume from now: downtime between restarts must not drain clocks.
-					// Resume mid-game: tick whoever is to move, charging only elapsed turn time.
+					// Restart recovery. Ticking resumes at the join instant: downtime
+					// between processes charges neither player's clock.
+					const nowMs = Date.now();
 					const turnNow = game.state.xfen.split(' ')[1] === 'b' ? 'black' : 'white';
-					room.clock = initialClock(game.timeControl, Date.now(), {
+					room.clock = initialClock(game.timeControl, nowMs, {
 						turn: turnNow,
-						turnStartedAtMs: game.lastMoveAtMs
+						turnStartedAtMs: nowMs
 					});
+				}
+				if (room.clock && game.status === 'started') {
+					// Flags are evaluated lazily; a join is a read, so a clock that ran
+					// out while nobody watched ends here.
+					const flagged = flaggedColor(room.clock, Date.now());
+					if (flagged && (await finalizeFlag(gameId, flagged)) !== 'failed') {
+						game = (await loadGame(gameId)) ?? game;
+					}
 				}
 				await socket.join(`game:${gameId}`);
 				const color = socket.data.userId ? await playerColorFor(gameId, socket.data.userId) : null;
@@ -173,16 +229,10 @@ export function injectSocketIO(io: IOServer): void {
 				if (room.clock) {
 					const flagged = flaggedColor(room.clock, nowMs);
 					if (flagged) {
-						try {
-							await completeGame(gameId, flagged === 'white' ? 'black' : 'white', 'timeout');
-						} catch (error) {
-							console.error('[realtime] flag finalize failed:', error);
+						const outcome = await finalizeFlag(gameId, flagged);
+						if (outcome === 'failed') {
 							return ack?.({ ok: false, reason: 'internal-error' });
 						}
-						io.to(`game:${gameId}`).emit('game:over', {
-							result: flagged === 'white' ? 'black' : 'white',
-							termination: 'timeout'
-						});
 						return ack?.({ ok: false, reason: 'flag-fell' });
 					}
 				}
@@ -215,6 +265,9 @@ export function injectSocketIO(io: IOServer): void {
 				});
 
 				if (result.finished) {
+					// The game is over: release its clock so idle eviction can reclaim
+					// the room instead of pinning it forever.
+					room.clock = undefined;
 					io.to(`game:${gameId}`).emit('game:over', result.finished);
 				}
 				ack?.({ ok: true });
@@ -270,6 +323,8 @@ export function injectSocketIO(io: IOServer): void {
 				console.error('[realtime] resignation finalize failed:', error);
 				return;
 			}
+			const room = rooms.get(gameId);
+			if (room) room.clock = undefined;
 			io.to(`game:${gameId}`).emit('game:over', {
 				result: color === 'white' ? 'black' : 'white',
 				termination: 'resignation'
@@ -281,8 +336,8 @@ export function injectSocketIO(io: IOServer): void {
 			const color = await playerColorFor(gameId, socket.data.userId);
 			if (!color) return;
 			roomFor(gameId).drawOfferedBy = color;
-			const opp =
-				color === 'white' ? (await loadGame(gameId))?.blackId : (await loadGame(gameId))?.whiteId;
+			const game = await loadGame(gameId);
+			const opp = game ? (color === 'white' ? game.blackId : game.whiteId) : null;
 			if (opp)
 				void notifyUser(opp, 'draw-offered', {
 					body: 'Your opponent offers a draw.',
@@ -307,6 +362,7 @@ export function injectSocketIO(io: IOServer): void {
 				console.error('[realtime] draw finalize failed:', error);
 				return;
 			}
+			room.clock = undefined;
 			io.to(`game:${gameId}`).emit('game:over', { result: 'draw', termination: 'agreement' });
 		});
 
@@ -356,6 +412,8 @@ export function startBackgroundJobs(): void {
 	if (backgroundJobsStarted) return;
 	backgroundJobsStarted = true;
 	startSweeper();
+	const flagTimer = setInterval(() => void sweepFlaggedRooms(), 10_000);
+	flagTimer.unref?.();
 	const timer = setInterval(() => evictIdleRooms(), 5 * 60 * 1000);
 	timer.unref?.();
 }

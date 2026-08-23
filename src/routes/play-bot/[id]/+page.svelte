@@ -6,6 +6,7 @@
 	import ChatPanel from '$lib/components/chat/ChatPanel.svelte';
 	import { isDropUci } from '$lib/components/board/pockets';
 	import { gameChannel, getSocket } from '$lib/client/socket';
+	import { terminationPhrase } from '$lib/client/terminations';
 	import { chooseBotMove } from '$lib/client/bot/search';
 	import type { DestMap } from '$lib/server/chess/types';
 
@@ -47,27 +48,14 @@
 	let botThinking = $state(false);
 	let over = $state<{ result: string; termination: string } | null>(null);
 	let orientation = $state<'white' | 'black'>('white');
+	/** Transient, non-blocking notice when a move fails or times out. */
+	let moveError = $state<string | null>(null);
 	let unsub: Array<() => void> = [];
-
-	const TERMINATIONS: Record<string, string> = {
-		checkmate: 'checkmate',
-		resignation: 'resignation',
-		timeout: 'time forfeit',
-		stalemate: 'stalemate',
-		'insufficient-material': 'insufficient material',
-		agreement: 'mutual agreement',
-		repetition: 'threefold repetition',
-		'fifty-moves': 'fifty-move rule',
-		kingofthehill: 'king reached the center',
-		threecheck: 'third check given',
-		racingkings: 'race finished',
-		'atomic-explosion': 'atomic explosion',
-		'horde-elimination': 'horde eliminated'
-	};
+	let moveErrorTimer: ReturnType<typeof setTimeout> | null = null;
 
 	const overText = $derived.by(() => {
 		if (!over) return '';
-		const how = TERMINATIONS[over.termination] ?? over.termination;
+		const how = terminationPhrase(over.termination);
 		return over.result === 'draw'
 			? `Drawn by ${how}.`
 			: `${over.result === 'white' ? 'White' : 'Black'} won by ${how}.`;
@@ -109,8 +97,24 @@
 		}
 	}
 
+	function showMoveError(message: string): void {
+		moveError = message;
+		if (moveErrorTimer) clearTimeout(moveErrorTimer);
+		moveErrorTimer = setTimeout(() => (moveError = null), 4000);
+	}
+
 	async function onMove(uci: string): Promise<void> {
-		await gameChannel.move(gameId, uci);
+		moveError = null;
+		try {
+			const res = await gameChannel.move(gameId, uci);
+			if (!res.ok) {
+				showMoveError(
+					res.reason === 'not-your-turn' ? 'It is not your turn.' : 'The server rejected that move.'
+				);
+			}
+		} catch {
+			showMoveError('That move did not reach the server. You can try again.');
+		}
 	}
 
 	async function maybeBotReply(): Promise<void> {
@@ -142,26 +146,6 @@
 
 	onMount(() => {
 		void (async () => {
-			const join: JoinResponse = await gameChannel.join(gameId);
-			if (!join.ok || !join.state) return;
-			info = join.game ?? null;
-			orientation = info?.yourColor === 'black' ? 'black' : 'white';
-			if (info?.status === 'finished') {
-				over = {
-					result: String(info.result ?? 'draw'),
-					termination: String(info.termination ?? '')
-				};
-			}
-			applyState({
-				state: join.state as {
-					xfen: string;
-					dests: DestMap;
-					inCheck: boolean;
-					pockets?: Record<string, number>;
-				}
-			});
-			sanMoves = join.sanMoves ?? [];
-
 			const socket = await getSocket();
 			const onMoved = (p: unknown) => {
 				const payload = p as Parameters<typeof applyState>[0] & {
@@ -183,12 +167,55 @@
 			socket.on('game:over', onOver);
 			unsub.push(() => socket.off('game:moved', onMoved));
 			unsub.push(() => socket.off('game:over', onOver));
-			void maybeBotReply();
+
+			// Room membership dies with the server-side socket, so every connect
+			// event (first one included) re-joins and refreshes from the
+			// authoritative payload. The in-flight guard collapses the cold-load
+			// overlap between the kick-off below and the first 'connect'.
+			let syncing = false;
+			const syncFromServer = async (): Promise<void> => {
+				if (syncing) return;
+				syncing = true;
+				try {
+					const join: JoinResponse = await gameChannel.join(gameId);
+					if (!join.ok || !join.state) return;
+					info = join.game ?? null;
+					orientation = info?.yourColor === 'black' ? 'black' : 'white';
+					if (info?.status === 'finished') {
+						over = {
+							result: String(info.result ?? 'draw'),
+							termination: String(info.termination ?? '')
+						};
+					}
+					applyState({
+						state: join.state as {
+							xfen: string;
+							dests: DestMap;
+							inCheck: boolean;
+							pockets?: Record<string, number>;
+						}
+					});
+					sanMoves = join.sanMoves ?? [];
+					void maybeBotReply();
+				} catch {
+					// Join failed or timed out; the next connect event retries it.
+				} finally {
+					syncing = false;
+				}
+			};
+			const onConnect = (): void => {
+				void syncFromServer();
+			};
+			socket.on('connect', onConnect);
+			unsub.push(() => socket.off('connect', onConnect));
+
+			void syncFromServer();
 		})();
 	});
 
 	onDestroy(() => {
 		for (const off of unsub) off();
+		if (moveErrorTimer) clearTimeout(moveErrorTimer);
 	});
 </script>
 
@@ -202,6 +229,9 @@
 		</p>
 		{#if over}
 			<p class="over" role="status">{overText}</p>
+		{/if}
+		{#if moveError}
+			<p class="move-error" role="alert">{moveError}</p>
 		{/if}
 		<Board
 			{xfen}
@@ -281,6 +311,11 @@
 		color: var(--amber);
 		font-weight: 600;
 		margin: 0 0 0.5rem;
+	}
+	.move-error {
+		color: var(--flag-red);
+		font-size: 13px;
+		margin: 0.25rem 0 0.5rem;
 	}
 	button.danger {
 		padding: 0.45rem 0.9rem;

@@ -7,9 +7,10 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	if (locals.session) throw redirect(302, '/');
 	const requested = url.searchParams.get('returnTo') ?? '/';
 	const returnTo = requested.startsWith('/') && !requested.startsWith('//') ? requested : '/';
+	const providers = oidcProvidersFromEnv();
 	return {
-		oidcEnabled: oidcProvidersFromEnv().length > 0,
-		oidcName: oidcProvidersFromEnv()[0]?.providerId ?? 'oidc',
+		oidcEnabled: providers.length > 0,
+		oidcName: providers[0]?.providerId ?? 'oidc',
 		returnTo
 	};
 };

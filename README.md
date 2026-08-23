@@ -12,14 +12,14 @@ Existing chess servers are either hosted services you cannot control, or heavywe
 
 - **Accounts**: register and sign in with email and password. Sessions persist across devices.
 - **Live games**: real-time play over WebSockets with clocks for bullet through classical time controls.
-- **Correspondence games**: days-per-move time controls for games that run over weeks. Move reminders through browser notifications.
+- **Correspondence games**: days-per-move time controls for games that run over weeks, with deadline display and automatic loss when a player oversteps.
 - **Variants**: standard chess, Chess960, Crazyhouse, King of the Hill, Three-check, Atomic, Horde, and Racing Kings.
 - **Ratings and leaderboards**: Glicko-2 ratings tracked per variant and speed class, with public leaderboards.
 - **Live board updates**: moves from your opponent appear instantly, including while you have the page open in the background.
 - **Chat**: per-game chat alongside the board during live games.
 - **Customization**: multiple board themes, piece sets, sound options, animation toggles, and board coordinates.
-- **Notifications**: in-app notifications plus optional web push for challenges, moves in correspondence games, and game results.
-- **Progressive web app**: installable on desktop and mobile, works offline for browsing history.
+- **Notifications**: in-app notifications plus optional web push for challenge responses, draw offers, and game results.
+- **Progressive web app**: installable on desktop and mobile, served from an offline app shell.
 - **Responsive design**: the same interface adapts from phone to desktop.
 
 ## Docker deployment
