@@ -41,7 +41,13 @@
 			const res = await fetch('/api/challenges', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ action: 'create-solo', variant, speedClass: speed, colorChoice })
+				body: JSON.stringify({
+					action: 'create-solo',
+					variant,
+					speedClass: speed,
+					colorChoice,
+					level
+				})
 			});
 			const body = (await res.json()) as { ok?: boolean; gameId?: string };
 			if (!res.ok || !body.ok || !body.gameId) {

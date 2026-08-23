@@ -50,4 +50,11 @@ describe('migration sql', () => {
 		expect(sql).toContain('ON "users"');
 		expect(sql).toContain(`WHERE "role" = 'admin'`);
 	});
+
+	it('adds games.bot_level idempotently for solo bot games', async () => {
+		const sql = await readFile(path.join(MIGRATIONS_DIR, '0003_bot_level.sql'), 'utf8');
+		expect(sql).toContain('ALTER TABLE "games"');
+		expect(sql).toContain('ADD COLUMN IF NOT EXISTS "bot_level"');
+		expect(sql).toContain('integer');
+	});
 });

@@ -7,7 +7,6 @@
 	import { isDropUci } from '$lib/components/board/pockets';
 	import { gameChannel, getSocket } from '$lib/client/socket';
 	import { terminationPhrase } from '$lib/client/terminations';
-	import { chooseBotMove } from '$lib/client/bot/search';
 	import type { DestMap } from '$lib/server/chess/types';
 
 	type JoinResponse = {
@@ -117,31 +116,15 @@
 		}
 	}
 
-	async function maybeBotReply(): Promise<void> {
-		if (over || !info) return;
+	/**
+	 * The bot lives on the server, so the page only mirrors its state: the
+	 * indicator shows while the empty seat is to move in a running game.
+	 * Leaving the page changes nothing; the server plays regardless.
+	 */
+	function syncThinking(): void {
 		const turn = xfen.split(' ')[1];
-		const seatEmpty = info.whiteId === null || info.blackId === null;
-		if (!seatEmpty) return;
-		const theirTurnNow =
-			(turn === 'w' && info.whiteId === null) || (turn === 'b' && info.blackId === null);
-		if (!theirTurnNow) return;
-		botThinking = true;
-		try {
-			const uci = await new Promise<string | null>((resolvePromise) => {
-				setTimeout(
-					() => resolvePromise(chooseBotMove(info?.variant ?? 'standard', xfen, urlLevel)),
-					50
-				);
-			});
-			await new Promise((r) => setTimeout(r, 400 + Math.random() * 800));
-			const stillTheirTurn =
-				(turn === 'w' && info?.whiteId === null) || (turn === 'b' && info?.blackId === null);
-			if (uci && stillTheirTurn && !over) await gameChannel.move(gameId, uci);
-		} catch {
-			// A search failure must not wedge the page; the human can keep playing.
-		} finally {
-			botThinking = false;
-		}
+		const emptySeat = info?.whiteId === null ? 'w' : info?.blackId === null ? 'b' : null;
+		botThinking = !over && info?.status === 'started' && emptySeat !== null && turn === emptySeat;
 	}
 
 	onMount(() => {
@@ -153,7 +136,7 @@
 					clock?: unknown;
 				};
 				applyState(payload);
-				void maybeBotReply();
+				syncThinking();
 			};
 			const onOver = (p: unknown) => {
 				const payload = p as { result?: string; termination?: string };
@@ -196,7 +179,7 @@
 						}
 					});
 					sanMoves = join.sanMoves ?? [];
-					void maybeBotReply();
+					syncThinking();
 				} catch {
 					// Join failed or timed out; the next connect event retries it.
 				} finally {
@@ -224,8 +207,7 @@
 <main class="bot-page">
 	<div class="board-column">
 		<p class="muted">
-			Level {urlLevel + 1} bot. You move both sides' pieces through the server; the bot answers empty
-			seats.
+			Level {urlLevel + 1} bot, played by the server. It keeps moving even if you close this page.
 		</p>
 		{#if over}
 			<p class="over" role="status">{overText}</p>

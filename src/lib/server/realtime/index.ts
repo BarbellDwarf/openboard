@@ -9,6 +9,7 @@ import {
 	initialClock,
 	remainingFor
 } from '../chess/clocks';
+import { chooseBotMove } from '$lib/client/bot/search';
 import {
 	createGame,
 	completeGame,
@@ -120,6 +121,107 @@ async function finalizeFlag(
 	return 'finished';
 }
 
+/**
+ * Apply one move through the shared path: flag check, persistence, clock
+ * charge, broadcast. Used by human moves and the server-side bot alike, so
+ * both pay clocks and emit identical events.
+ */
+async function commitMove(
+	gameId: string,
+	uci: string,
+	mover: Color
+): Promise<{ ok: boolean; reason?: string }> {
+	const game = await loadGame(gameId);
+	if (!game || game.status !== 'started') return { ok: false, reason: 'not-active' };
+
+	const room = roomFor(gameId);
+	const nowMs = Date.now();
+
+	if (room.clock) {
+		// Guarded on the just-read lastMoveAtMs: if a move commits while we
+		// finalize, the timeout claim loses and that finish path owns the broadcast.
+		const flagged = flaggedColor(room.clock, nowMs);
+		if (flagged) {
+			const outcome = await finalizeFlag(gameId, flagged, { lastMoveAtMs: game.lastMoveAtMs });
+			if (outcome === 'failed') return { ok: false, reason: 'internal-error' };
+			return { ok: false, reason: 'flag-fell' };
+		}
+	}
+
+	let result;
+	try {
+		result = await persistMove(gameId, uci);
+	} catch (error) {
+		// Concurrent duplicate moves lose the unique(game_id, ply) race.
+		console.error('[realtime] move persistence failed:', error);
+		return { ok: false, reason: 'rejected' };
+	}
+	if (!result.applied) return { ok: false, reason: result.reason ?? 'rejected' };
+
+	if (room.clock) {
+		room.clock = applyMoveToClock(room.clock, mover, nowMs, game.timeControl.incrementMs);
+	}
+
+	ioRef?.to(`game:${gameId}`).emit('game:moved', {
+		gameId,
+		ply: game.sanMoves.length + 1,
+		uci,
+		san: result.san,
+		state: result.state,
+		clock: clockView(room, nowMs),
+		deadline:
+			game.timeControl.daysPerMove != null
+				? correspondenceDeadline(game.timeControl.daysPerMove, nowMs)
+				: null
+	});
+
+	if (result.finished) {
+		// The game is over: release its clock so idle eviction can reclaim
+		// the room instead of pinning it forever.
+		room.clock = undefined;
+		ioRef?.to(`game:${gameId}`).emit('game:over', result.finished);
+	}
+	return { ok: true };
+}
+
+/** One pending bot turn per game; re-triggers while pending collapse into one. */
+const botTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+function emptySeatOf(g: { whiteId: string | null; blackId: string | null }): Color | null {
+	return g.whiteId === null ? 'white' : g.blackId === null ? 'black' : null;
+}
+
+/**
+ * Wake the house bot if this is a solo game and it is the empty seat's turn.
+ * Safe to call from joins and moves alike: the DB row is the truth, so the
+ * timer re-checks everything and server restarts self-heal on the next join.
+ */
+function scheduleBotTurn(gameId: string): void {
+	if (botTimers.has(gameId)) return;
+	const timer = setTimeout(
+		() => {
+			botTimers.delete(gameId);
+			void playBotMove(gameId);
+		},
+		600 + Math.random() * 900
+	);
+	botTimers.set(gameId, timer);
+}
+
+async function playBotMove(gameId: string): Promise<void> {
+	try {
+		const game = await loadGame(gameId);
+		if (!game || game.status !== 'started' || game.botLevel == null) return;
+		const seat = emptySeatOf(game);
+		if (!seat || game.state.turn !== seat) return;
+		const uci = chooseBotMove(game.variant, game.state.xfen, game.botLevel);
+		if (!uci) return;
+		await commitMove(gameId, uci, seat);
+	} catch (error) {
+		console.error('[realtime] bot move failed:', error);
+	}
+}
+
 /** Safety net for timed games nobody is watching: finalize every fallen flag. */
 export async function sweepFlaggedRooms(nowMs: number = Date.now()): Promise<number> {
 	let finalized = 0;
@@ -192,6 +294,9 @@ export function injectSocketIO(io: IOServer): void {
 					}
 				}
 				await socket.join(`game:${gameId}`);
+				// Solo games wake the house bot here: it opens when the human picked
+				// black, and it recovers after a server restart once anyone looks in.
+				scheduleBotTurn(gameId);
 				const color = socket.data.userId ? await playerColorFor(gameId, socket.data.userId) : null;
 				const deadline =
 					game.timeControl.daysPerMove != null
@@ -245,59 +350,9 @@ export function injectSocketIO(io: IOServer): void {
 				if (!color) return ack?.({ ok: false, reason: 'not-a-player' });
 				if (game.state.turn !== color) return ack?.({ ok: false, reason: 'not-your-turn' });
 
-				const room = roomFor(gameId);
-				const nowMs = Date.now();
-
-				if (room.clock) {
-					const flagged = flaggedColor(room.clock, nowMs);
-					if (flagged) {
-						// Guarded on the just-read lastMoveAtMs: if the player's move
-						// commits while we finalize, the timeout claim loses and the
-						// mover's own finish path owns the broadcast.
-						const outcome = await finalizeFlag(gameId, flagged, {
-							lastMoveAtMs: game.lastMoveAtMs
-						});
-						if (outcome === 'failed') {
-							return ack?.({ ok: false, reason: 'internal-error' });
-						}
-						return ack?.({ ok: false, reason: 'flag-fell' });
-					}
-				}
-
-				let result;
-				try {
-					result = await persistMove(gameId, uci);
-				} catch (error) {
-					// Concurrent duplicate moves lose the unique(game_id, ply) race.
-					console.error('[realtime] move persistence failed:', error);
-					return ack?.({ ok: false, reason: 'rejected' });
-				}
-				if (!result.applied) return ack?.({ ok: false, reason: result.reason ?? 'rejected' });
-
-				if (room.clock) {
-					room.clock = applyMoveToClock(room.clock, color, nowMs, game.timeControl.incrementMs);
-				}
-
-				io.to(`game:${gameId}`).emit('game:moved', {
-					gameId,
-					ply: game.sanMoves.length + 1,
-					uci,
-					san: result.san,
-					state: result.state,
-					clock: clockView(room, nowMs),
-					deadline:
-						game.timeControl.daysPerMove != null
-							? correspondenceDeadline(game.timeControl.daysPerMove, nowMs)
-							: null
-				});
-
-				if (result.finished) {
-					// The game is over: release its clock so idle eviction can reclaim
-					// the room instead of pinning it forever.
-					room.clock = undefined;
-					io.to(`game:${gameId}`).emit('game:over', result.finished);
-				}
-				ack?.({ ok: true });
+				const outcome = await commitMove(gameId, uci, color);
+				if (outcome.ok) scheduleBotTurn(gameId);
+				ack?.(outcome);
 			}
 		);
 
@@ -390,8 +445,13 @@ export function injectSocketIO(io: IOServer): void {
 			if (!socket.data.userId) return;
 			const color = await playerColorFor(gameId, socket.data.userId);
 			if (!color) return;
-			roomFor(gameId).drawOfferedBy = color;
 			const game = await loadGame(gameId);
+			if (game?.botLevel != null) {
+				// The house declines politely; there is no opponent to convince.
+				setTimeout(() => socket.emit('game:draw-declined'), 900);
+				return;
+			}
+			roomFor(gameId).drawOfferedBy = color;
 			const opp = game ? (color === 'white' ? game.blackId : game.whiteId) : null;
 			if (opp)
 				void notifyUser(opp, 'draw-offered', {

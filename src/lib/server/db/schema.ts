@@ -142,6 +142,8 @@ export const games = pgTable(
 		moveCount: integer('move_count').default(0).notNull(),
 		whiteId: uuid('white_id').references(() => users.id, { onDelete: 'set null' }),
 		blackId: uuid('black_id').references(() => users.id, { onDelete: 'set null' }),
+		/** Bot strength (0-4) for solo games. Null for games between humans. */
+		botLevel: integer('bot_level'),
 		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 		startedAt: timestamp('started_at', { withTimezone: true }),
 		finishedAt: timestamp('finished_at', { withTimezone: true }),
