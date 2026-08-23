@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { preferences } from '$lib/server/db/schema';
 import { BOARD_THEMES, PIECE_SETS, SOUND_PACKS } from '$lib/config/appearance';
+import { isKnownBoardFlavor, isValidSoundVolume } from '$lib/server/preferences/validation';
 import type { RequestHandler } from './$types';
 
 const THEME_IDS = BOARD_THEMES.map((t) => t.id) as string[];
@@ -33,6 +34,9 @@ export const PATCH: RequestHandler = async ({ request, locals }) => {
 	if (body.soundPack != null && !SOUND_IDS.includes(String(body.soundPack))) {
 		return json({ ok: false, reason: 'bad-sound-pack' }, { status: 422 });
 	}
+	if (body.boardFlavor != null && !isKnownBoardFlavor(body.boardFlavor)) {
+		return json({ ok: false, reason: 'bad-board-flavor' }, { status: 422 });
+	}
 
 	const allowed = [
 		'boardTheme',
@@ -59,7 +63,7 @@ export const PATCH: RequestHandler = async ({ request, locals }) => {
 		const value = body[key];
 		if (value === undefined) continue;
 		if (key === 'soundVolume') {
-			if (typeof value !== 'number' || value < 0 || value > 1) {
+			if (!isValidSoundVolume(value)) {
 				return json({ ok: false, reason: 'bad-sound-volume' }, { status: 422 });
 			}
 		} else if ((booleans as readonly string[]).includes(key)) {

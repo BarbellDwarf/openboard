@@ -28,6 +28,7 @@
 	let showDests = $state(true);
 	let loaded = $state(false);
 	let saved = $state(false);
+	let saveFailed = $state(false);
 
 	async function loadPrefs(): Promise<void> {
 		const res = await fetch('/api/preferences');
@@ -66,10 +67,18 @@
 					coordinates,
 					showDests
 				})
-			}).then(() => {
-				saved = true;
-				setTimeout(() => (saved = false), 2000);
-			});
+			})
+				.then((res) => {
+					saveFailed = !res.ok;
+					if (res.ok) {
+						saved = true;
+						setTimeout(() => (saved = false), 2000);
+					}
+				})
+				.catch(() => {
+					saved = false;
+					saveFailed = true;
+				});
 		}, 400);
 	}
 	$effect(() => {
@@ -89,6 +98,9 @@
 <main class="appearance">
 	<h1>Appearance</h1>
 	{#if saved}<p class="saved" role="status">Saved</p>{/if}
+	{#if saveFailed}
+		<p class="save-error" role="alert">Could not save preferences. Change a setting to retry.</p>
+	{/if}
 
 	<div class="layout">
 		<section>
@@ -250,6 +262,11 @@
 		padding: 0.35rem 0.8rem;
 		border-radius: 999px;
 		font-weight: 600;
+	}
+	.save-error {
+		color: var(--flag-red);
+		font-weight: 600;
+		margin-bottom: 1rem;
 	}
 	button:focus-visible,
 	input:focus-visible {
