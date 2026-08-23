@@ -331,3 +331,13 @@ export function injectSocketIO(io: IOServer): void {
 		});
 	});
 }
+
+let backgroundJobsStarted = false;
+
+/** Called by both prod server and dev plugin after io is wired. */
+export function startBackgroundJobs(): void {
+	if (backgroundJobsStarted) return;
+	backgroundJobsStarted = true;
+	const timer = setInterval(() => evictIdleRooms(), 5 * 60 * 1000);
+	timer.unref?.();
+}
