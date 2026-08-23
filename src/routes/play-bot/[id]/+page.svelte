@@ -4,6 +4,7 @@
 
 	import Board from '$lib/components/board/Board.svelte';
 	import ChatPanel from '$lib/components/chat/ChatPanel.svelte';
+	import { isDropUci } from '$lib/components/board/pockets';
 	import { gameChannel, getSocket } from '$lib/client/socket';
 	import { chooseBotMove } from '$lib/client/bot/search';
 	import type { DestMap } from '$lib/server/chess/types';
@@ -38,6 +39,8 @@
 	} | null>(null);
 	let xfen = $state('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
 	let dests = $state<DestMap>({});
+	/** Pocket holdings for crazyhouse games; null otherwise. */
+	let pockets = $state<Record<string, number> | null>(null);
 	let sanMoves = $state<string[]>([]);
 	let lastMove = $state<[string, string] | null>(null);
 	let checkSquare = $state<string | null>(null);
@@ -90,15 +93,18 @@
 	function applyState(payload: {
 		uci?: string;
 		san?: string;
-		state?: { xfen: string; dests: DestMap; inCheck: boolean };
+		state?: { xfen: string; dests: DestMap; inCheck: boolean; pockets?: Record<string, number> };
 	}): void {
 		if (payload.uci && payload.san) {
-			lastMove = [payload.uci.slice(0, 2), payload.uci.slice(2, 4)];
+			lastMove = isDropUci(payload.uci)
+				? [payload.uci.slice(2, 4), payload.uci.slice(2, 4)]
+				: [payload.uci.slice(0, 2), payload.uci.slice(2, 4)];
 			sanMoves = [...sanMoves, payload.san];
 		}
 		if (payload.state) {
 			xfen = payload.state.xfen;
 			dests = payload.state.dests;
+			pockets = payload.state.pockets ?? null;
 			checkSquare = payload.state.inCheck ? findKing(xfen) : null;
 		}
 	}
@@ -146,7 +152,14 @@
 					termination: String(info.termination ?? '')
 				};
 			}
-			applyState({ state: join.state as { xfen: string; dests: DestMap; inCheck: boolean } });
+			applyState({
+				state: join.state as {
+					xfen: string;
+					dests: DestMap;
+					inCheck: boolean;
+					pockets?: Record<string, number>;
+				}
+			});
 			sanMoves = join.sanMoves ?? [];
 
 			const socket = await getSocket();
@@ -198,6 +211,8 @@
 			interactive
 			anyColor
 			{orientation}
+			variant={info?.variant}
+			{pockets}
 			onMove={(uci) => void onMove(uci)}
 		/>
 	</div>
