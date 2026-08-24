@@ -54,6 +54,7 @@
 		<p class="empty">No accounts yet.</p>
 	{:else}
 		<div class="table-scroll">
+			<div class="table-scroll">
 			<table>
 				<thead>
 					<tr
@@ -85,6 +86,7 @@
 				</tbody>
 			</table>
 		</div>
+		</div>
 	{/if}
 </main>
 
@@ -104,6 +106,9 @@
 		color: var(--lichen);
 		font-size: 13px;
 		margin: 0 0 1rem;
+	}
+	.table-scroll {
+		overflow-x: auto;
 	}
 	table {
 		width: 100%;

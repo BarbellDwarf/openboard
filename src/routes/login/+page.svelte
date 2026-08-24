@@ -153,7 +153,7 @@
 	}
 	.divider {
 		text-align: center;
-		color: var(--walnut);
+		color: var(--text-muted);
 		margin: 1rem 0;
 	}
 	.switch {

@@ -37,3 +37,6 @@ data/postgres/
 
 # Temporary worktrees created by the issue-to-implementation pipeline
 .worktrees/
+
+# UI audit artifacts
+.review-screens/

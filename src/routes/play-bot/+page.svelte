@@ -173,7 +173,7 @@
 		border: none;
 		cursor: pointer;
 		background: var(--amber);
-		color: var(--ink);
+		color: var(--on-primary);
 		font-weight: 600;
 	}
 	button.primary:disabled {

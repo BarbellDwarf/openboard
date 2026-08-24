@@ -387,7 +387,7 @@
 		padding: 0.45rem 0.9rem;
 		border-radius: 8px;
 		background: var(--amber);
-		color: var(--ink);
+		color: var(--on-primary);
 		text-decoration: none;
 		font-size: 13px;
 		font-weight: 600;

@@ -129,13 +129,13 @@
 		padding: 0.5rem 1rem;
 		border-radius: 8px;
 		background: var(--amber);
-		color: var(--ink);
+		color: var(--on-primary);
 	}
 	button.primary {
 		padding: 0.5rem 1rem;
 		border-radius: 8px;
 		background: var(--amber);
-		color: var(--ink);
+		color: var(--on-primary);
 		border: none;
 		cursor: pointer;
 	}
