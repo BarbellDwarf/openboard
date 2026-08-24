@@ -221,7 +221,7 @@ async function auditPage(page, label) {
 
 const browser = await chromium.launch({ channel: 'chrome', args: ['--no-sandbox'] });
 
-for (const [vpName, viewport] of Object.entries(VIEWPORTS)) {
+for (const vpName of Object.keys(VIEWPORTS)) {
 	for (const scheme of ['night', 'day']) {
 		const ctx = await authedContext(browser, VIEWPORTS[vpName], scheme);
 		const page = await ctx.newPage();
