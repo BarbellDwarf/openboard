@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onDestroy, onMount } from 'svelte';
-	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
+	import { goto } from '$app/navigation';
+import { page } from '$app/state';
 
 	import Board from '$lib/components/board/Board.svelte';
 	import ChatPanel from '$lib/components/chat/ChatPanel.svelte';
@@ -194,6 +196,23 @@
 				clock = null;
 				botThinking = false;
 			};
+
+			async function playAgain(): Promise<void> {
+				const variant = info?.variant ?? 'standard';
+				const res = await fetch('/api/challenges', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						action: 'create-solo',
+						variant,
+						speedClass: 'blitz',
+						colorChoice: 'random',
+						level: urlLevel
+					})
+				});
+				const body = await res.json();
+				if (body.gameId) goto(`/play-bot/${body.gameId}?level=${urlLevel}`, { invalidateAll: true });
+			}
 			socket.on('game:moved', onMoved);
 			socket.on('game:over', onOver);
 			unsub.push(() => socket.off('game:moved', onMoved));
@@ -316,7 +335,10 @@
 				Resign
 			</button>
 		{:else}
-			<a class="again" href="/play-bot">Play another bot game</a>
+			<button type="button" class="primary" onclick={() => void playAgain()}>
+				Play again
+			</button>
+			<a class="again" href="/play-bot">New settings</a>
 		{/if}
 		<h2>Chat</h2>
 		<ChatPanel {gameId} />
