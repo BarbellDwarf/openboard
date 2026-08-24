@@ -91,7 +91,7 @@ const ratingsMock = vi.hoisted(() => ({ applyRatedResult: vi.fn() }));
 vi.mock('$lib/server/ratings/service', () => ratingsMock);
 
 import { completeGame, persistMove } from './game-service';
-import { applyMove, startPosition } from './engine';
+import { applyMove, chess960StartFen, startPosition } from './engine';
 
 const ratedRow = {
 	rated: true,
@@ -306,13 +306,25 @@ describe('stored PGN correctness', () => {
 	});
 
 	it('omits SetUp/FEN when the variant start equals the standard array', async () => {
-		// Chess960 games here always begin from the default array, identical
-		// to the standard start string, so buildPgn's dedup keeps the PGN clean
-		// and replay from the implicit standard start stays correct.
+		// A Chess960 row without a stored startFen is a legacy row that began
+		// from the default array, identical to the standard start string, so
+		// buildPgn's dedup keeps the PGN clean and replay from the implicit
+		// standard start stays correct.
 		const pgn = await playFirstMove('chess960');
 		expect(pgn).toContain('[Variant "Chess960"]');
 		expect(pgn).not.toContain('[SetUp');
 		expect(pgn).not.toContain('[FEN ');
+	});
+
+	it('embeds the stored Chess960 array in SetUp/FEN', async () => {
+		// A shuffled game stores its back rank at creation. persistMove must
+		// read that stored start, not a fresh default array, or exports would
+		// replay from the wrong position.
+		const shuffled = chess960StartFen(() => 0.5);
+		const pgn = await playFirstMove('chess960', { startFen: shuffled });
+		expect(pgn).toContain('[Variant "Chess960"]');
+		expect(pgn).toContain('[SetUp "1"]');
+		expect(pgn).toContain(`[FEN "${shuffled}"]`);
 	});
 
 	it('labels the bot seat with its strength in solo games', async () => {

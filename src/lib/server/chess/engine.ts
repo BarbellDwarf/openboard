@@ -111,6 +111,38 @@ export function startPosition(variant: VariantId): EngineState {
 	return stateFromPosition(loadPosition(variant), variant);
 }
 
+/**
+ * Builds a valid Chess960 starting position. Bishops sit on opposite-colored
+ * files, the king lands strictly between the two rooks, and black's back rank
+ * mirrors white's so the array is reproducible in X-FEN. Pure and injectable
+ * for tests: pass a seeded rand in [0, 1) for determinism.
+ */
+export function chess960StartFen(rand: () => number = Math.random): string {
+	const darkFiles = ['b', 'd', 'f', 'h'];
+	const lightFiles = ['a', 'c', 'e', 'g'];
+	const pick = (arr: string[]): string => {
+		const index = Math.min(Math.floor(rand() * arr.length), arr.length - 1);
+		return arr.splice(index, 1)[0];
+	};
+	const placement: Record<string, string> = {};
+	placement[pick(darkFiles)] = 'B';
+	placement[pick(lightFiles)] = 'B';
+	const remaining = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].filter((f) => !placement[f]);
+	placement[pick(remaining)] = 'Q';
+	placement[pick(remaining)] = 'N';
+	placement[pick(remaining)] = 'N';
+	// Three squares left: rook, king, rook, with the king between the rooks.
+	placement[remaining[1]] = 'K';
+	placement[remaining[0]] = 'R';
+	placement[remaining[2]] = 'R';
+	const white = 'abcdefgh'
+		.split('')
+		.map((f) => placement[f])
+		.join('');
+	const black = white.split('').reverse().join('');
+	return `${black}/pppppppp/8/8/8/8/PPPPPPPP/${white} w KQkq - 0 1`;
+}
+
 export function applyMove(variant: VariantId, xfen: string, uci: string): ApplyMoveResult {
 	let pos: Position;
 	try {
@@ -210,9 +242,11 @@ export function drawByRepetition(xfenHistory: string[]): boolean {
 export function drawByThreefold(
 	variant: VariantId,
 	xfensAfterEachPly: string[],
-	latestXfen: string
+	latestXfen: string,
+	startXfen?: string
 ): boolean {
-	return drawByRepetition([startPosition(variant).xfen, ...xfensAfterEachPly, latestXfen]);
+	const seed = startXfen ?? startPosition(variant).xfen;
+	return drawByRepetition([seed, ...xfensAfterEachPly, latestXfen]);
 }
 
 export function drawByFiftyMoves(xfen: string): boolean {

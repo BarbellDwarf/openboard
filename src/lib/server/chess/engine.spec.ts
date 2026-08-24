@@ -4,6 +4,7 @@ import { parseSan } from 'chessops/san';
 
 import {
 	applyMove,
+	chess960StartFen,
 	drawByFiftyMoves,
 	drawByRepetition,
 	drawByThreefold,
@@ -129,6 +130,68 @@ describe('rules engine', () => {
 			const state = startPosition(variant);
 			expect(state.dests).toBeDefined();
 			expect(Object.keys(state.dests).length).toBeGreaterThan(0);
+		}
+	});
+});
+
+describe('chess960 start positions', () => {
+	// Deterministic LCG returning values in [0, 1).
+	function seeded(seed: number): () => number {
+		let s = seed >>> 0;
+		return () => {
+			s = (s * 1664525 + 1013904223) >>> 0;
+			return s / 0x1_0000_0000;
+		};
+	}
+
+	it('is deterministic under a seeded random source', () => {
+		const a = chess960StartFen(seeded(42));
+		const b = chess960StartFen(seeded(42));
+		expect(a).toBe(b);
+	});
+
+	it('places bishops on opposite-colored files', () => {
+		for (let seed = 1; seed <= 64; seed++) {
+			const board = chess960StartFen(seeded(seed)).split(' ')[0].split('/')[7];
+			const jobs: number[] = [];
+			let bishops = 0;
+			for (let file = 0; file < 8; file++) {
+				if (board[file] === 'B') {
+					bishops++;
+					jobs.push(file % 2);
+				}
+			}
+			expect(bishops).toBe(2);
+			expect(new Set(jobs).size).toBe(2);
+		}
+	});
+
+	it('keeps the king strictly between the two rooks', () => {
+		for (let seed = 1; seed <= 64; seed++) {
+			const rank8 = chess960StartFen(seeded(seed)).split(' ')[0].split('/')[0];
+			const pieces = rank8.split('').map((p, file) => ({ p, file }));
+			const king = pieces.find((x) => x.p === 'K')!.file;
+			const rooks = pieces.filter((x) => x.p === 'R').map((x) => x.file);
+			expect(rooks[0] < king).toBe(true);
+			expect(king < rooks[1]).toBe(true);
+		}
+	});
+
+	it('mirrors black a rank against the white back rank', () => {
+		for (let seed = 1; seed <= 64; seed++) {
+			const parts = chess960StartFen(seeded(seed)).split(' ');
+			const rank8 = parts[0].split('/')[0];
+			const rank1 = parts[0].split('/')[7];
+			expect(rank8).toBe(rank1.split('').reverse().join(''));
+		}
+	});
+
+	it('round-trips through the Chess960 loader and carries castling rights', () => {
+		for (let seed = 1; seed <= 64; seed++) {
+			const fen = chess960StartFen(seeded(seed));
+			const pos = loadPosition('chess960', fen);
+			expect(makeFen(pos.toSetup())).toBe(fen);
+			expect(pos.castles.castlingRights.size()).toBe(4);
 		}
 	});
 });

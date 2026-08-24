@@ -138,6 +138,8 @@ export const games = pgTable(
 		 */
 		termination: text('termination'),
 		currentXfen: text('current_xfen'),
+		/** Start position for non-standard arrays, e.g. shuffled Chess960. */
+		startFen: text('start_fen'),
 		pgn: text('pgn'),
 		moveCount: integer('move_count').default(0).notNull(),
 		whiteId: uuid('white_id').references(() => users.id, { onDelete: 'set null' }),
