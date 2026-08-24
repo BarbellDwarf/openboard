@@ -10,6 +10,14 @@ import {
 	draughtsStartFen
 } from '$lib/server/chess/draughts';
 
+import {
+	cells,
+	campMembers,
+	stateBoard,
+	stateTurn,
+	hopChainDests
+} from '$lib/server/chess/chinese-checkers';
+
 /** Material values plus light piece-square bias. */
 const VALUES = { pawn: 100, knight: 320, bishop: 330, rook: 500, queen: 900, king: 0 };
 
@@ -98,6 +106,9 @@ function sqName(sq: number): string {
 export function chooseBotMove(variant: string, xfen: string, level: number): string | null {
 	// Checkers bot: shallow material+position eval with negamax.
 	if (variant === 'checkers') return chooseCheckersBotMove(xfen, level);
+
+	// Chinese Checkers bot: greedy advancement toward goal camp.
+	if (variant === 'chinese-checkers') return chooseChineseCheckersBotMove(xfen, level);
 
 	const rulesMap: Record<string, Parameters<typeof setupPosition>[0]> = {
 		standard: 'chess',
@@ -242,5 +253,78 @@ function chooseCheckersBotMove(xfen: string, level: number): string | null {
 	}
 	const bestScore = candidates[0].score;
 	const ties = candidates.filter((c) => bestScore - c.score <= 10);
+	return ties[Math.floor(Math.random() * ties.length)].uci;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Chinese Checkers bot                                               */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Greedy heuristic: for each piece, compute the hex distance to the goal
+ * camp centroid.  Prefer moves that reduce that distance most, with a
+ * bonus for longer hop chains (they advance faster).  Shuffle ties to
+ * avoid deterministic play.
+ */
+function chooseChineseCheckersBotMove(xfen: string, level: number): string | null {
+	const turn = stateTurn(xfen);
+	const board = stateBoard(xfen);
+	const botChar = turn === 'w' ? 'W' : 'B';
+	const goalCamp = turn === 'w' ? 3 : 0;
+	const goalIndices = campMembers[goalCamp];
+
+	// Compute goal centroid for distance heuristic.
+	let goalCx = 0;
+	let goalCy = 0;
+	for (const gi of goalIndices) {
+		goalCx += cells[gi].px;
+		goalCy += cells[gi].py;
+	}
+	goalCx /= goalIndices.length;
+	goalCy /= goalIndices.length;
+
+	// Evaluate distance of a piece at index idx to goal centroid.
+	function distToGoal(idx: number): number {
+		const dx = cells[idx].px - goalCx;
+		const dy = cells[idx].py - goalCy;
+		return Math.sqrt(dx * dx + dy * dy);
+	}
+
+	// Generate all legal moves and score them.
+	type Candidate = { uci: string; score: number };
+	const candidates: Candidate[] = [];
+
+	for (let i = 0; i < 121; i++) {
+		if (board[i] !== botChar) continue;
+		const originName = cells[i].name;
+		const destIndices = hopChainDests(board, i);
+		const startDist = distToGoal(i);
+
+		for (const destIdx of destIndices) {
+			const endDist = distToGoal(destIdx);
+			// Score: distance reduction (positive is better) + chain bonus.
+			const distGain = startDist - endDist;
+			// Count hops: chain length - 1 = number of hops.
+			const chainLen = destIndices.length > 0 ? 1 : 0;
+			const uci = `${originName}-${cells[destIdx].name}`;
+			const score = distGain + chainLen * 2;
+			candidates.push({ uci, score });
+		}
+	}
+
+	if (candidates.length === 0) return null;
+
+	candidates.sort((a, b) => b.score - a.score);
+
+	// Add blunder chance for lower levels.
+	const blunderChance = [0.5, 0.25, 0.12, 0.05, 0][Math.min(level, 4)] ?? 0;
+	if (Math.random() < blunderChance) {
+		const pool = candidates.slice(Math.min(3, candidates.length - 1));
+		return pool[Math.floor(Math.random() * pool.length)].uci;
+	}
+
+	// Pick from top-scoring candidates.
+	const bestScore = candidates[0].score;
+	const ties = candidates.filter((c) => bestScore - c.score <= 5);
 	return ties[Math.floor(Math.random() * ties.length)].uci;
 }

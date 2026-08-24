@@ -15,6 +15,8 @@
 	let pairing = $state(false);
 	let busy = $state(false);
 
+	const isUntimedVariant = $derived(variant === 'chinese-checkers');
+
 	async function post(body: Record<string, unknown>): Promise<Record<string, unknown>> {
 		const res = await fetch('/api/challenges', {
 			method: 'POST',
@@ -65,27 +67,31 @@
 					{/each}
 				</select>
 			</label>
-			<label>
-				Time control
-				<select bind:value={speed}>
-					<option value="bullet">Bullet 1+0</option>
-					<option value="blitz">Blitz 5+2</option>
-					<option value="rapid">Rapid 10+10</option>
-					<option value="classical">Classical 30+30</option>
-					<option value="correspondence">Correspondence</option>
-				</select>
-			</label>
-			{#if speed === 'correspondence'}
+			{#if !isUntimedVariant}
 				<label>
-					Days per move
-					<select bind:value={days}>
-						{#each [1, 2, 3, 7, 14] as d (d)}<option value={d}>{d}</option>{/each}
+					Time control
+					<select bind:value={speed}>
+						<option value="bullet">Bullet 1+0</option>
+						<option value="blitz">Blitz 5+2</option>
+						<option value="rapid">Rapid 10+10</option>
+						<option value="classical">Classical 30+30</option>
+						<option value="correspondence">Correspondence</option>
 					</select>
 				</label>
+				{#if speed === 'correspondence'}
+					<label>
+						Days per move
+						<select bind:value={days}>
+							{#each [1, 2, 3, 7, 14] as d (d)}<option value={d}>{d}</option>{/each}
+						</select>
+					</label>
+				{/if}
 			{/if}
-			<label class="check">
-				<input type="checkbox" bind:checked={rated} /> Rated
-			</label>
+			{#if !isUntimedVariant}
+				<label class="check">
+					<input type="checkbox" bind:checked={rated} /> Rated
+				</label>
+			{/if}
 			<label>
 				Color
 				<select bind:value={colorChoice}>

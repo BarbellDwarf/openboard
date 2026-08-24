@@ -9,7 +9,8 @@ export const VARIANTS = [
 	'atomic',
 	'horde',
 	'racingkings',
-	'checkers'
+	'checkers',
+	'chinese-checkers'
 ] as const;
 
 export type VariantId = (typeof VARIANTS)[number];
@@ -37,6 +38,7 @@ export type Termination =
 	| 'atomic-king-death'
 	| 'horde-wiped'
 	| 'racingkings-finish'
+	| 'chinese-checkers-finish'
 	| 'no-legal-move'
 	| 'admin-closed';
 

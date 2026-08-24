@@ -38,6 +38,8 @@
 	let busy = $state(false);
 	let error = $state<string | null>(null);
 
+	const isUntimedVariant = $derived(variant === 'chinese-checkers');
+
 	async function start(): Promise<void> {
 		busy = true;
 		error = null;
@@ -88,14 +90,16 @@
 						{/each}
 					</select>
 				</label>
-				<label>
-					<span>Time control</span>
-					<select bind:value={speed}>
-						{#each SPEEDS as s (s.id)}
-							<option value={s.id}>{s.label}</option>
-						{/each}
-					</select>
-				</label>
+				{#if !isUntimedVariant}
+					<label>
+						<span>Time control</span>
+						<select bind:value={speed}>
+							{#each SPEEDS as s (s.id)}
+								<option value={s.id}>{s.label}</option>
+							{/each}
+						</select>
+					</label>
+				{/if}
 				<label>
 					<span>Bot strength</span>
 					<select bind:value={level}>
