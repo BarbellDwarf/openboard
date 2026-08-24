@@ -139,7 +139,7 @@ export function chess960StartFen(rand: () => number = Math.random): string {
 		.split('')
 		.map((f) => placement[f])
 		.join('');
-	const black = white.split('').reverse().join('');
+	const black = white.split('').reverse().join('').toLowerCase();
 	return `${black}/pppppppp/8/8/8/8/PPPPPPPP/${white} w KQkq - 0 1`;
 }
 
