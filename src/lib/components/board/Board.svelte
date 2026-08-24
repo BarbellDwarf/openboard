@@ -157,15 +157,19 @@
 	let promotionColor: 'white' | 'black' = $state('white');
 
 	function handleNormalMove(orig: Key, dest: Key): void {
-		const piece = api?.state.pieces.get(dest) ?? api?.state.pieces.get(orig);
-		if (
-			piece?.role === 'pawn' &&
-			((piece.color === 'white' && dest[1] === '8') || (piece.color === 'black' && dest[1] === '1'))
-		) {
-			pendingPromotion = { from: orig, to: dest };
-			promotionColor = piece.color;
-			api?.set({ movable: { color: undefined } });
-			return;
+		// Checkers: crowning is automatic, no promotion dialog needed.
+		if (variant !== 'checkers') {
+			const piece = api?.state.pieces.get(dest) ?? api?.state.pieces.get(orig);
+			if (
+				piece?.role === 'pawn' &&
+				((piece.color === 'white' && dest[1] === '8') ||
+					(piece.color === 'black' && dest[1] === '1'))
+			) {
+				pendingPromotion = { from: orig, to: dest };
+				promotionColor = piece.color;
+				api?.set({ movable: { color: undefined } });
+				return;
+			}
 		}
 		onMove?.(`${orig}${dest}`);
 	}

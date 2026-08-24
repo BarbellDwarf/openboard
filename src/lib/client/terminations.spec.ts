@@ -24,6 +24,7 @@ const SERVER_TOKENS: Termination[] = [
 	'atomic-king-death',
 	'horde-wiped',
 	'racingkings-finish',
+	'no-legal-move',
 	'admin-closed'
 ];
 
