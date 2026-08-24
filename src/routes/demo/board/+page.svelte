@@ -77,4 +77,12 @@
 		font-family: 'Marcellus', serif;
 		color: var(--parchment);
 	}
+	/* On phones the board tracks the viewport minus the demo padding, so
+	   squares and coordinates never spill past the edge. */
+	@media (max-width: 640px) {
+		.demo {
+			--board-size: calc(100vw - 2rem);
+			padding: 1.5rem 1rem;
+		}
+	}
 </style>

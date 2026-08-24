@@ -115,6 +115,15 @@
 		padding: 0.6rem 1.3rem;
 		border-radius: 8px;
 	}
+	@media (max-width: 640px) {
+		.play {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			min-height: 44px;
+			padding: 0.7rem 1.3rem;
+		}
+	}
 	a:focus-visible {
 		outline: 2px solid var(--amber);
 		outline-offset: 2px;
