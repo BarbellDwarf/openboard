@@ -143,6 +143,7 @@ export interface MovePersistenceResult {
 		| 'illegal-move'
 		| 'invalid-move-format'
 		| 'invalid-position'
+		| 'promotion-piece-required'
 		| 'already-moved';
 	finished?: { result: ResultValue; termination: Termination } | null;
 	state?: EngineState;

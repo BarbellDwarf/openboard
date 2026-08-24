@@ -4,7 +4,7 @@ import { makeFen, parseFen } from 'chessops/fen';
 import { makeSanAndPlay } from 'chessops/san';
 import { defaultPosition, setupPosition } from 'chessops/variant';
 import { isDrop, makeSquare, parseUci } from 'chessops';
-import type { Move } from 'chessops/types';
+import type { Move, Role } from 'chessops/types';
 import type { Position } from 'chessops/chess';
 import type { Rules } from 'chessops/types';
 
@@ -151,6 +151,87 @@ export function chess960StartFen(rand: () => number = Math.random): string {
 	return `${black}/pppppppp/8/8/8/8/PPPPPPPP/${white} w KQkq - 0 1`;
 }
 
+/**
+ * Applies a horde promotion directly: chessops rejects every last-rank pawn
+ * move for the horde side, so the resulting position is built by hand from
+ * the current FEN. Validates geometry and occupancy before mutating.
+ */
+function applyHordePromotion(
+	pos: Position,
+	xfen: string,
+	from: number,
+	to: number,
+	promotion: Role
+): ApplyMoveResult {
+	const mover = pos.board.get(from);
+	if (!mover || mover.role !== 'pawn' || mover.color !== 'white') {
+		return { ok: false, error: 'illegal-move' };
+	}
+	const target = pos.board.get(to);
+	if (target && target.color !== 'black') return { ok: false, error: 'illegal-move' };
+
+	const letters: Record<string, string> = { queen: 'Q', rook: 'R', bishop: 'B', knight: 'N' };
+	const letter = letters[promotion];
+	if (!letter) return { ok: false, error: 'illegal-move' };
+
+	const rows = xfen.split(' ')[0].split('/');
+	const rowOf = (square: number): number => 7 - Math.floor(square / 8);
+	const colOf = (square: number): number => square % 8;
+	const expand = (row: string): string[] => {
+		const out: string[] = [];
+		for (const ch of row) {
+			if (/\d/.test(ch)) out.push(...Array(Number(ch)).fill('.'));
+			else out.push(ch);
+		}
+		return out;
+	};
+	const compress = (cells: string[]): string => {
+		let out = '';
+		let empty = 0;
+		for (const c of cells) {
+			if (c === '.') empty++;
+			else {
+				if (empty) out += String(empty);
+				empty = 0;
+				out += c;
+			}
+		}
+		return out;
+	};
+
+	const fRow = rowOf(from);
+	const fCol = colOf(from);
+	const tRow = rowOf(to);
+	const tCol = colOf(to);
+	const fromCells = expand(rows[fRow]);
+	if (fromCells[fCol] !== 'P') return { ok: false, error: 'illegal-move' };
+	fromCells[fCol] = '.';
+	const toCells = rows.length > tRow ? expand(rows[tRow]) : [];
+	toCells[tCol] = letter;
+
+	const placement = [...rows];
+	placement[fRow] = compress(fromCells);
+	placement[tRow] = compress(toCells);
+
+	const parts = xfen.split(' ');
+	const newFen = `${placement.join('/')} b ${parts[2] ?? 'kq'} - 0 ${parts[5] ?? '1'}`;
+
+	try {
+		const nextPos = loadPosition('horde', newFen);
+		const state = stateFromPosition(nextPos, 'horde');
+		const san = `${target ? 'x' : ''}${makeSquare(to)}=${letter}${state.inCheck ? '+' : ''}`;
+		return {
+			ok: true,
+			san,
+			uci: `${makeSquare(from)}${makeSquare(to)}${letter.toLowerCase()}`,
+			state,
+			finished: detectFinish(nextPos)
+		};
+	} catch {
+		return { ok: false, error: 'invalid-position' };
+	}
+}
+
 export function applyMove(variant: VariantId, xfen: string, uci: string): ApplyMoveResult {
 	if (variant === 'checkers') {
 		const result = draughtsApplyMoveResult(xfen, uci);
@@ -177,6 +258,7 @@ export function applyMove(variant: VariantId, xfen: string, uci: string): ApplyM
 	}
 
 	let pos: Position;
+
 	try {
 		pos = loadPosition(variant, xfen);
 	} catch {
@@ -185,11 +267,51 @@ export function applyMove(variant: VariantId, xfen: string, uci: string): ApplyM
 
 	const parsed = parseUci(uci);
 	if (!parsed) return { ok: false, error: 'invalid-move-format' };
+
+	// A pawn reaching its promotion rank must declare the promoted piece.
+	if ('from' in parsed) {
+		const destRank = Math.floor(parsed.to / 8);
+		const mover = pos.board.get(parsed.from);
+		const promoRank = mover?.role === 'pawn' ? (mover.color === 'white' ? 7 : 0) : null;
+		if (promoRank !== null && destRank === promoRank && parsed.promotion === undefined) {
+			return { ok: false, error: 'promotion-piece-required' };
+		}
+	}
+
+	// chessops cannot process promotions for the horde side (its Horde rules
+	// reject every last-rank pawn move), so horde promotions are applied here
+	// through direct board surgery with full geometric validation.
+	if (variant === 'horde' && 'from' in parsed && parsed.promotion) {
+		const mover = pos.board.get(parsed.from);
+		const target = pos.board.get(parsed.to);
+		if (
+			mover?.role === 'pawn' &&
+			mover.color === 'white' &&
+			(!target || target.color === 'black') &&
+			Math.abs((parsed.from % 8) - (parsed.to % 8)) <= 1
+		) {
+			return applyHordePromotion(pos, xfen, parsed.from, parsed.to, parsed.promotion);
+		}
+	}
+
 	const move = normalizeMove(pos, parsed);
 
 	if (!isLegalByName(pos, variant, move)) return { ok: false, error: 'illegal-move' };
 
 	const san = makeSanAndPlay(pos, move);
+
+	// Post-guard: no pawn may remain on the rank it promotes to.
+	for (let square = 0; square < 64; square++) {
+		const piece = pos.board.get(square);
+		const rank = Math.floor(square / 8);
+		if (
+			piece?.role === 'pawn' &&
+			((piece.color === 'white' && rank === 7) || (piece.color === 'black' && rank === 0))
+		) {
+			return { ok: false, error: 'invalid-position' };
+		}
+	}
+
 	const finished = detectFinish(pos);
 
 	return {
