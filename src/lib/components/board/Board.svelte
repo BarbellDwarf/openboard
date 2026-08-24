@@ -272,7 +272,26 @@
 
 	onMount(() => {
 		api = Chessground(el, baseConfig());
+		// Chessground caches its bounding rect and only refreshes it on window
+		// resize or scroll. Layout above the board (clock bar, nameplates,
+		// web fonts) settles after mount and shifts the board without resizing
+		// it, leaving clicks mapped one square off. Watch the board's screen
+		// position and nudge the cache whenever it moves.
+		const notifyBoundsMoved = () => window.dispatchEvent(new Event('resize'));
+		let lastLeft = el.getBoundingClientRect().left;
+		let lastTop = el.getBoundingClientRect().top;
+		const positionWatch = setInterval(() => {
+			const rect = el.getBoundingClientRect();
+			if (rect.left !== lastLeft || rect.top !== lastTop) {
+				lastLeft = rect.left;
+				lastTop = rect.top;
+				notifyBoundsMoved();
+			}
+		}, 400);
+		requestAnimationFrame(notifyBoundsMoved);
+		document.fonts?.ready.then(notifyBoundsMoved);
 		return () => {
+			clearInterval(positionWatch);
 			api?.destroy();
 			api = null;
 		};
