@@ -20,7 +20,7 @@ OpenBoard stands on open-source art and code. Everything shipped in this reposit
 
 ## Board themes
 
-All board color schemes in static/themes are project-original CSS gradients, GPL-3.0-or-later.
+All board color schemes are project-original CSS gradients defined as theme classes in src/app.css, GPL-3.0-or-later.
 
 ## Sounds
 
