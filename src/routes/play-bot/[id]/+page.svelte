@@ -171,6 +171,23 @@
 		botThinking = !over && info?.status === 'started' && emptySeat !== null && turn === emptySeat;
 	}
 
+	async function playAgain(): Promise<void> {
+		const variant = info?.variant ?? 'standard';
+		const res = await fetch('/api/challenges', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				action: 'create-solo',
+				variant,
+				speedClass: 'blitz',
+				colorChoice: 'random',
+				level: urlLevel
+			})
+		});
+		const body = await res.json();
+		if (body.gameId) goto(`/play-bot/${body.gameId}?level=${urlLevel}`, { invalidateAll: true });
+	}
+
 	onMount(() => {
 		void (async () => {
 			const socket = await getSocket();
@@ -196,23 +213,6 @@
 				botThinking = false;
 			};
 
-			async function playAgain(): Promise<void> {
-				const variant = info?.variant ?? 'standard';
-				const res = await fetch('/api/challenges', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						action: 'create-solo',
-						variant,
-						speedClass: 'blitz',
-						colorChoice: 'random',
-						level: urlLevel
-					})
-				});
-				const body = await res.json();
-				if (body.gameId)
-					goto(`/play-bot/${body.gameId}?level=${urlLevel}`, { invalidateAll: true });
-			}
 			socket.on('game:moved', onMoved);
 			socket.on('game:over', onOver);
 			unsub.push(() => socket.off('game:moved', onMoved));
