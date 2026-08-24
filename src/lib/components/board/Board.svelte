@@ -10,6 +10,12 @@
 
 	import type { DestMap } from '$lib/server/chess/types';
 
+	import {
+		preferences as savedPreferences,
+		resolveBoardTheme,
+		resolvePieceSet
+	} from '$lib/client/preferences';
+
 	import Pocket from './Pocket.svelte';
 	import { dropUci, pocketCountsFor, roleName, splitDropDests, type PocketLetter } from './pockets';
 
@@ -23,6 +29,10 @@
 		anyColor?: boolean;
 		coordinates?: boolean;
 		animationMs?: number;
+		/**
+		 * Omit to follow the signed-in user's saved appearance; pass a value to
+		 * pin the board (the settings page preview does).
+		 */
 		boardTheme?: string;
 		pieceSet?: string;
 		variant?: string;
@@ -41,12 +51,18 @@
 		anyColor = false,
 		coordinates = true,
 		animationMs = 180,
-		boardTheme = 'vinyl',
-		pieceSet = 'cburnett',
+		boardTheme: boardThemeProp,
+		pieceSet: pieceSetProp,
 		variant,
 		pockets = null,
 		onMove
 	}: Props = $props();
+
+	// Appearance resolution: explicit prop, then the user's saved preference,
+	// then the built-in default. Every consumer that omits the props (game,
+	// bot games, demo board) picks up the saved choice with no page edits.
+	const boardTheme = $derived(resolveBoardTheme(boardThemeProp, $savedPreferences.boardTheme));
+	const pieceSet = $derived(resolvePieceSet(pieceSetProp, $savedPreferences.pieceSet));
 
 	let el: HTMLDivElement;
 	let api = $state<Api | null>(null);
