@@ -126,6 +126,7 @@
 			socket.on('game:moved', onMoved);
 			socket.on('game:over', (p: { result: string; termination: string }) => {
 				over = p;
+				clock = null;
 				if (info) {
 					info.status = 'finished';
 					info.result = p.result;

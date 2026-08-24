@@ -191,6 +191,7 @@
 					result: String(payload.result ?? 'draw'),
 					termination: String(payload.termination ?? '')
 				};
+				clock = null;
 				botThinking = false;
 			};
 			socket.on('game:moved', onMoved);
