@@ -8,6 +8,7 @@
 	import { isDropUci } from '$lib/components/board/pockets';
 	import type { ClockView, Side } from '$lib/components/game/clockDisplay';
 	import { gameChannel, getSocket } from '$lib/client/socket';
+	import { playCapture, playCheck, playGameEnd, playLowTime, playMove } from '$lib/client/sound';
 	import { terminationPhrase } from '$lib/client/terminations';
 	import type { DestMap } from '$lib/server/chess/types';
 
@@ -103,6 +104,10 @@
 			: `${over.result === 'white' ? 'White' : 'Black'} won by ${how}.`;
 	});
 
+	function handleLowTime(side: Side): void {
+		if (info?.yourColor && info.yourColor === side) playLowTime();
+	}
+
 	function findKing(fen: string): string | null {
 		const target = fen.split(' ')[1] === 'w' ? 'K' : 'k';
 		const rows = fen.split(' ')[0].split('/');
@@ -130,12 +135,20 @@
 				? [payload.uci.slice(2, 4), payload.uci.slice(2, 4)]
 				: [payload.uci.slice(0, 2), payload.uci.slice(2, 4)];
 			sanMoves = [...sanMoves, payload.san];
+
+			// Gameplay sounds for every accepted move (human and bot).
+			if (payload.san.includes('x')) {
+				playCapture();
+			} else {
+				playMove();
+			}
 		}
 		if (payload.state) {
 			xfen = payload.state.xfen;
 			dests = payload.state.dests;
 			pockets = payload.state.pockets ?? null;
 			checkSquare = payload.state.inCheck ? findKing(xfen) : null;
+			if (payload.state.inCheck) playCheck();
 		}
 	}
 
@@ -193,6 +206,7 @@
 				};
 				clock = null;
 				botThinking = false;
+				playGameEnd();
 			};
 			socket.on('game:moved', onMoved);
 			socket.on('game:over', onOver);
@@ -278,6 +292,7 @@
 				whiteName={seatName('white')}
 				blackName={seatName('black')}
 				announceLow
+				onLowTime={handleLowTime}
 			/>
 		{/if}
 		<Board

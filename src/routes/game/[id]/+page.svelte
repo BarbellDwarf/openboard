@@ -7,7 +7,9 @@
 	import ClockBar from '$lib/components/game/ClockBar.svelte';
 	import { isDropUci } from '$lib/components/board/pockets';
 	import { gameChannel, getSocket, type JoinResponse } from '$lib/client/socket';
+	import { playCapture, playCheck, playGameEnd, playLowTime, playMove } from '$lib/client/sound';
 	import { terminationLabel } from '$lib/client/terminations';
+	import type { Side } from '$lib/components/game/clockDisplay';
 	import type { DestMap } from '$lib/server/chess/types';
 
 	const gameId = $derived(page.params.id as string);
@@ -66,7 +68,8 @@
 	});
 
 	async function applyServerMove(payload: Record<string, unknown>): Promise<void> {
-		sanMoves = [...sanMoves, String(payload.san)];
+		const san = String(payload.san);
+		sanMoves = [...sanMoves, san];
 		const uci = String(payload.uci);
 		lastMove = isDropUci(uci)
 			? [uci.slice(2, 4), uci.slice(2, 4)]
@@ -81,6 +84,14 @@
 			clockAt = Date.now();
 		}
 		if (payload.deadline) deadline = Number(payload.deadline);
+
+		// Gameplay sounds: move/capture, then check if applicable.
+		if (san.includes('x')) {
+			playCapture();
+		} else {
+			playMove();
+		}
+		if (st.inCheck) playCheck();
 	}
 
 	function findKing(fen: string): string | null {
@@ -132,6 +143,7 @@
 					info.result = p.result;
 					info.termination = p.termination;
 				}
+				playGameEnd();
 			});
 			socket.on('game:draw-offered', (p: { by: 'white' | 'black' }) => {
 				incomingDrawForYou = !!yourColor && p.by !== yourColor;
@@ -216,6 +228,10 @@
 		return `${num}. ${sanMoves[n - 1]}`;
 	});
 
+	function handleLowTime(side: Side): void {
+		if (yourColor && yourColor === side) playLowTime();
+	}
+
 	// A timeout broadcast names the winner, so the flagged seat is the other
 	// one. Players get the personal verdict; spectators get the seat name.
 	const overTerm = $derived.by(() => {
@@ -248,6 +264,7 @@
 				whiteName="White"
 				blackName={info.blackId ? 'Black' : 'Open seat'}
 				announceLow
+				onLowTime={handleLowTime}
 			/>
 
 			<Board
