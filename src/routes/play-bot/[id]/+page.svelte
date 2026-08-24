@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { onDestroy, onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { goto } from '$app/navigation';
-import { page } from '$app/state';
+	import { page } from '$app/state';
 
 	import Board from '$lib/components/board/Board.svelte';
 	import ChatPanel from '$lib/components/chat/ChatPanel.svelte';
@@ -211,7 +210,8 @@ import { page } from '$app/state';
 					})
 				});
 				const body = await res.json();
-				if (body.gameId) goto(`/play-bot/${body.gameId}?level=${urlLevel}`, { invalidateAll: true });
+				if (body.gameId)
+					goto(`/play-bot/${body.gameId}?level=${urlLevel}`, { invalidateAll: true });
 			}
 			socket.on('game:moved', onMoved);
 			socket.on('game:over', onOver);
@@ -335,9 +335,7 @@ import { page } from '$app/state';
 				Resign
 			</button>
 		{:else}
-			<button type="button" class="primary" onclick={() => void playAgain()}>
-				Play again
-			</button>
+			<button type="button" class="primary" onclick={() => void playAgain()}> Play again </button>
 			<a class="again" href="/play-bot">New settings</a>
 		{/if}
 		<h2>Chat</h2>
