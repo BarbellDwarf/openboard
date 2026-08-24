@@ -361,6 +361,12 @@
 		position: absolute;
 		inset: 0;
 	}
+	/* Chessground hangs the file letters 4px below the board edge
+	   (coords.files { bottom: -4px }); overflow:hidden here sheared them
+	   mid-glyph. Seat the coordinate row just inside instead. */
+	.ob-board :global(coords.files) {
+		bottom: 2px;
+	}
 	.cg-board-wrap:focus-visible {
 		outline: 2px solid var(--amber);
 		outline-offset: 3px;

@@ -195,19 +195,20 @@
 	}
 	.primary {
 		background: var(--amber);
-		color: #211b10;
+		color: var(--on-primary);
 	}
 	.secondary {
 		border: 1px solid var(--walnut);
 		color: var(--parchment);
 	}
+	/* Two-by-two so no card ever dangles alone under an odd column count. */
 	.features {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+		grid-template-columns: repeat(2, minmax(0, 1fr));
 		gap: 1rem;
 		max-width: 1000px;
-		margin: 3.5rem auto;
-		padding: 0 1rem;
+		margin: 3rem auto 0;
+		padding: 0 1rem 2.5rem;
 	}
 	.features article {
 		background: var(--baize-raised);
@@ -237,6 +238,11 @@
 		}
 		.cta {
 			justify-content: center;
+		}
+	}
+	@media (max-width: 640px) {
+		.features {
+			grid-template-columns: 1fr;
 		}
 	}
 </style>

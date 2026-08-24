@@ -74,7 +74,6 @@
 					<option value="correspondence">Correspondence</option>
 				</select>
 			</label>
-			<button type="button" onclick={() => (speed = 'correspondence')}>Correspondence...</button>
 			{#if speed === 'correspondence'}
 				<label>
 					Days per move
@@ -171,8 +170,9 @@
 		text-transform: uppercase;
 		letter-spacing: 0.04em;
 	}
-	select,
-	input[type='checkbox'] {
+	/* Checkboxes are themed globally in app.css; this rule is for selects only,
+	   its padding would distort the fixed-size checkbox box. */
+	select {
 		background: var(--baize);
 		border: 1px solid var(--walnut);
 		border-radius: 6px;
@@ -192,7 +192,7 @@
 	button.primary {
 		background: var(--amber);
 		border-color: var(--amber);
-		color: #211b10;
+		color: var(--on-primary);
 		font-weight: 600;
 	}
 	button:hover {

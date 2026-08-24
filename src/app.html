@@ -3,6 +3,21 @@
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<script>
+			// Pre-paint theme restore: runs before first paint so a stored day
+			// session never flashes the night palette.
+			(function () {
+				try {
+					if (localStorage.getItem('ob.color-scheme') === 'day') {
+						document.documentElement.dataset.scheme = 'day';
+						var meta = document.querySelector('meta[name="theme-color"]');
+						if (meta) meta.setAttribute('content', '#ece5d4');
+					}
+				} catch (e) {
+					/* storage unavailable: ship the default dark session */
+				}
+			})();
+		</script>
 		<link rel="icon" type="image/png" href="%sveltekit.assets%/favicon.png" />
 		%sveltekit.head%
 		<link rel="manifest" href="/manifest.webmanifest" />

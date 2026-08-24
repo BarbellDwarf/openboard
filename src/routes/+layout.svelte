@@ -87,6 +87,41 @@
 	function active(href: string): boolean {
 		return page.url.pathname.startsWith(href);
 	}
+
+	type ColorScheme = 'day' | 'night';
+	const SCHEME_KEY = 'ob.color-scheme';
+	let scheme = $state<ColorScheme>('night');
+
+	function setScheme(next: ColorScheme): void {
+		scheme = next;
+		if (next === 'day') document.documentElement.dataset.scheme = 'day';
+		else delete document.documentElement.dataset.scheme;
+		try {
+			localStorage.setItem(SCHEME_KEY, next);
+		} catch {
+			/* storage unavailable: theme lasts for this visit only */
+		}
+		// The appearance settings page listens in so its checkbox stays in step.
+		window.dispatchEvent(new CustomEvent<ColorScheme>('ob:scheme', { detail: next }));
+	}
+
+	// Status-bar colour follows the session (PWA chrome).
+	$effect(() => {
+		document
+			.querySelector('meta[name="theme-color"]')
+			?.setAttribute('content', scheme === 'day' ? '#ece5d4' : '#0f1b14');
+	});
+
+	$effect(() => {
+		// app.html's inline script already applied any stored choice pre-paint;
+		// here we mirror it into component state and follow external changes.
+		scheme = document.documentElement.dataset.scheme === 'day' ? 'day' : 'night';
+		function onScheme(event: Event): void {
+			scheme = (event as CustomEvent<ColorScheme>).detail;
+		}
+		window.addEventListener('ob:scheme', onScheme);
+		return () => window.removeEventListener('ob:scheme', onScheme);
+	});
 </script>
 
 <svelte:window onclick={onWindowClick} onkeydown={onWindowKeydown} />
@@ -99,6 +134,31 @@
 		{/each}
 	</nav>
 	<div class="right">
+		<button
+			type="button"
+			class="scheme"
+			aria-label={scheme === 'day' ? 'Switch to night session' : 'Switch to day session'}
+			aria-pressed={scheme === 'day'}
+			onclick={() => setScheme(scheme === 'day' ? 'night' : 'day')}
+		>
+			<svg class="sun" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none">
+				<circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.7" />
+				<path
+					d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.5 1.5M17.2 17.2l1.5 1.5M18.7 5.3l-1.5 1.5M6.8 17.2l-1.5 1.5"
+					stroke="currentColor"
+					stroke-width="1.7"
+					stroke-linecap="round"
+				/>
+			</svg>
+			<svg class="moon" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none">
+				<path
+					d="M20.5 13.2A8.5 8.5 0 1 1 10.8 3.5a7 7 0 0 0 9.7 9.7Z"
+					stroke="currentColor"
+					stroke-width="1.7"
+					stroke-linejoin="round"
+				/>
+			</svg>
+		</button>
 		{#if user}
 			<div class="bell-wrap" bind:this={bellWrap}>
 				<button
@@ -175,7 +235,7 @@
 		gap: 1.5rem;
 		padding: 0.7rem 1.4rem;
 		border-bottom: 1px solid var(--walnut);
-		background: rgb(15 27 20 / 92%);
+		background: var(--veil);
 		position: sticky;
 		top: 0;
 		z-index: 50;
@@ -240,7 +300,8 @@
 		position: relative;
 		display: flex;
 	}
-	.right .bell {
+	.right .bell,
+	.right .scheme {
 		position: relative;
 		display: grid;
 		place-items: center;
@@ -249,9 +310,20 @@
 		padding: 0;
 	}
 	.right .bell:hover,
+	.right .scheme:hover,
 	.right .bell[aria-expanded='true'] {
 		color: var(--amber);
 		background: rgb(232 163 61 / 10%);
+	}
+	/* Icon tracks the session without waiting on hydration. */
+	.scheme .moon {
+		display: none;
+	}
+	:global([data-scheme='day']) .scheme .sun {
+		display: none;
+	}
+	:global([data-scheme='day']) .scheme .moon {
+		display: block;
 	}
 	.badge {
 		position: absolute;
@@ -262,7 +334,7 @@
 		padding: 0 4px;
 		border-radius: 999px;
 		background: var(--flag-red);
-		color: var(--parchment);
+		color: var(--on-flag);
 		font-family: var(--font-body);
 		font-size: 10px;
 		font-weight: 600;
@@ -323,6 +395,10 @@
 		color: color-mix(in srgb, var(--parchment) 55%, transparent);
 		font-size: 12px;
 		border-top: 1px solid color-mix(in srgb, var(--walnut) 40%, transparent);
+	}
+	:global([data-scheme='day']) footer {
+		/* The night mix lands under 4.5:1 once the text flips dark. */
+		color: color-mix(in srgb, var(--parchment) 75%, transparent);
 	}
 	footer a {
 		color: var(--walnut);
