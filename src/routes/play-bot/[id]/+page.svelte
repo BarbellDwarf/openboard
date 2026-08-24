@@ -287,15 +287,14 @@
 			<p class="move-error" role="alert">{moveError}</p>
 		{/if}
 		{#if timed}
-			<!-- Untimed bot games render no bar at all; timed ones seat the twin
-			     dials around the board exactly like the live game page. -->
+			<!-- Opponent bar above, your bar below — standard game layout. -->
 			<ClockBar
 				{clock}
 				{clockAt}
 				timed
 				turn={sideToMove}
-				whiteName={seatName('white')}
-				blackName={seatName('black')}
+				side={orientation === 'white' ? 'black' : 'white'}
+				name={seatName(orientation === 'white' ? 'black' : 'white')}
 				announceLow
 			/>
 		{/if}
@@ -317,8 +316,8 @@
 				{clockAt}
 				timed
 				turn={sideToMove}
-				whiteName={seatName('white')}
-				blackName={seatName('black')}
+				side={orientation}
+				name={seatName(orientation)}
 			/>
 		{/if}
 	</div>

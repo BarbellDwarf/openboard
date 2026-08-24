@@ -240,13 +240,19 @@
 {:else}
 	<main class="game-page">
 		<div class="board-column">
+			<!-- Opponent bar above the board. -->
 			<ClockBar
 				{clock}
 				{clockAt}
 				timed={info.timeControl.initialMs != null}
 				turn={sideToMove}
-				whiteName="White"
-				blackName={info.blackId ? 'Black' : 'Open seat'}
+				side={yourColor === 'white' ? 'black' : 'white'}
+				name={yourColor === 'white' ? (info.blackId ? 'Black' : 'Open seat') : 'White'}
+				flagged={over?.termination === 'timeout' && over.result !== 'draw'
+					? over.result === 'white'
+						? 'black'
+						: 'white'
+					: null}
 				announceLow
 			/>
 
@@ -262,13 +268,14 @@
 				onMove={(uci) => void onMove(uci)}
 			/>
 
+			<!-- Your bar below the board. -->
 			<ClockBar
 				{clock}
 				{clockAt}
 				timed={info.timeControl.initialMs != null}
 				turn={sideToMove}
-				whiteName="White"
-				blackName={info.blackId ? 'Black' : 'Open seat'}
+				side={yourColor ?? 'white'}
+				name={yourColor === 'white' ? 'White' : 'Black'}
 			/>
 
 			{#if deadline && info.status === 'started'}
