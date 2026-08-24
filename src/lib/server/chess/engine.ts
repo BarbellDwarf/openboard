@@ -153,11 +153,37 @@ export function applyMove(variant: VariantId, xfen: string, uci: string): ApplyM
 
 	const parsed = parseUci(uci);
 	if (!parsed) return { ok: false, error: 'invalid-move-format' };
+
+	// A pawn reaching its promotion rank must declare the promoted piece.
+	// Some variant rules (horde) otherwise accept the bare push and leave a
+	// pawn parked on the last rank, which poisons every later position.
+	if ('from' in parsed) {
+		const destRank = Math.floor(parsed.to / 8);
+		const mover = pos.board.get(parsed.from);
+		const promoRank = mover?.role === 'pawn' ? (mover.color === 'white' ? 7 : 0) : null;
+		if (promoRank !== null && destRank === promoRank && parsed.promotion === undefined) {
+			return { ok: false, error: 'promotion-piece-required' };
+		}
+	}
+
 	const move = normalizeMove(pos, parsed);
 
 	if (!isLegalByName(pos, variant, move)) return { ok: false, error: 'illegal-move' };
 
 	const san = makeSanAndPlay(pos, move);
+
+	// Post-guard: no pawn may remain on the rank it promotes to.
+	for (let square = 0; square < 64; square++) {
+		const piece = pos.board.get(square);
+		const rank = Math.floor(square / 8);
+		if (
+			piece?.role === 'pawn' &&
+			((piece.color === 'white' && rank === 7) || (piece.color === 'black' && rank === 0))
+		) {
+			return { ok: false, error: 'invalid-position' };
+		}
+	}
+
 	const finished = detectFinish(pos);
 
 	return {

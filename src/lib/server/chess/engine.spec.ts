@@ -196,6 +196,37 @@ describe('chess960 start positions', () => {
 	});
 });
 
+describe('promotion guards', () => {
+	it('rejects an unsuffixed horde pawn push to the last rank', () => {
+		const fen = 'rnbqkbnr/ppppppPp/8/8/8/8/PPPPPPPP/PPPPPPPP w kq - 0 1';
+		const r = applyMove('horde', fen, 'g7g8');
+		expect(r).toEqual({ ok: false, error: 'promotion-piece-required' });
+	});
+
+	it('accepts the suffixed horde promotion', () => {
+		const fen = 'rnbqkbnr/ppppppPp/8/8/8/8/PPPPPPPP/PPPPPPPP w kq - 0 1';
+		const r = applyMove('horde', fen, 'g7g8q');
+		expect(r.ok).toBe(true);
+		if (r.ok) expect(r.san).toContain('=');
+	});
+
+	it('rejects an unsuffixed standard pawn push to the last rank', () => {
+		const fen = '4k3/P7/8/8/8/8/8/4K3 w - - 0 1';
+		expect(applyMove('standard', fen, 'a7a8')).toEqual({
+			ok: false,
+			error: 'promotion-piece-required'
+		});
+	});
+
+	it('keeps rejecting a poisoned horde position after any move', () => {
+		// A legacy row with a pawn parked on g8 must not silently keep working:
+		// the next move trips the back-rank post-guard with a clear reason.
+		const poisoned = 'r5P1/2p5/p3k3/P7/4P3/PPP3P1/P1PPPPP1/PPPPPPPP b - - 0 22';
+		const r = applyMove('horde', poisoned, 'a6a5');
+		expect(r.ok).toBe(false);
+	});
+});
+
 describe('clocks', () => {
 	it('charges the mover and adds increment', () => {
 		const clock = initialClock({ initialMs: 60000, incrementMs: 2000, daysPerMove: null }, 0);

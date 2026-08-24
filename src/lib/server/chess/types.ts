@@ -70,7 +70,11 @@ export type ApplyMoveResult =
 			uci: string;
 			finished: FinishedInfo | null;
 	  }
-	| { ok: false; error: 'illegal-move' | 'invalid-move-format' | 'invalid-position' };
+	| {
+			ok: false;
+			error:
+				'illegal-move' | 'invalid-move-format' | 'invalid-position' | 'promotion-piece-required';
+	  };
 
 export function speedClassFor(tc: TimeControl): SpeedClass {
 	if (tc.daysPerMove != null) return 'classical';
