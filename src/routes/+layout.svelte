@@ -9,6 +9,7 @@
 		notificationPermission,
 		pushStatusMessage
 	} from '$lib/client/push';
+	import { hydratePreferences } from '$lib/client/preferences';
 
 	let { data, children } = $props();
 
@@ -21,6 +22,13 @@
 		{ href: '/play-bot', label: 'Play a bot' },
 		{ href: '/learn', label: 'Learn' }
 	];
+
+	// Feed the caller's saved appearance into the shared client store so every
+	// Board renders their theme and piece set. Reruns when the layout load
+	// refreshes (the unread-badge poll); identical values are skipped inside.
+	$effect(() => {
+		hydratePreferences(data.preferences);
+	});
 
 	let menuOpen = $state(false);
 	let bellWrap: HTMLElement | null = $state(null);
@@ -188,6 +196,13 @@
 						<a role="menuitem" href={resolve('/notifications')} onclick={() => (menuOpen = false)}>
 							{unreadCount > 0 ? `Notifications (${unreadCount})` : 'Notifications'}
 						</a>
+						<a
+							role="menuitem"
+							href={resolve('/settings/appearance')}
+							onclick={() => (menuOpen = false)}
+						>
+							Appearance
+						</a>
 						<div class="push-row">
 							{#if !data.pushConfigured}
 								<p class="quiet">Push isn't set up on this server.</p>
@@ -210,7 +225,9 @@
 					</div>
 				{/if}
 			</div>
-			<span class="who">{user.name}</span>
+			<a class="who" href={resolve('/settings/appearance')} title="Appearance settings">
+				{user.name}
+			</a>
 			<button type="button" onclick={() => void signOut()}>Sign out</button>
 		{:else}
 			<a class="signin" href={resolve('/login')}>Sign in</a>

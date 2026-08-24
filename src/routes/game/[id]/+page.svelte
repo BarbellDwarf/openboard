@@ -4,6 +4,7 @@
 	import { page } from '$app/state';
 	import Board from '$lib/components/board/Board.svelte';
 	import ChatPanel from '$lib/components/chat/ChatPanel.svelte';
+	import ClockBar from '$lib/components/game/ClockBar.svelte';
 	import { isDropUci } from '$lib/components/board/pockets';
 	import { gameChannel, getSocket, type JoinResponse } from '$lib/client/socket';
 	import { terminationLabel } from '$lib/client/terminations';
@@ -39,8 +40,6 @@
 	let clock = $state<{ whiteMs: number; blackMs: number; ticking: string | null } | null>(null);
 	/** When `clock` was received; the ticking side drains from this moment. */
 	let clockAt = $state<number>(Date.now());
-	/** Ticking value for dial text, recomputed on every ticker tick. */
-	let nowMs = $state<number>(Date.now());
 	let deadline = $state<number | null>(null);
 	let incomingDrawForYou = $state(false);
 	let amAdmin = $state(false);
@@ -51,7 +50,6 @@
 	let moveError = $state<string | null>(null);
 
 	let socketUnsub: Array<() => void> = [];
-	let ticker: ReturnType<typeof setInterval> | null = null;
 	let moveErrorTimer: ReturnType<typeof setTimeout> | null = null;
 
 	const yourColor = $derived(info?.yourColor ?? null);
@@ -62,29 +60,10 @@
 			xfen.split(' ')[1]?.[0] === (yourColor === 'white' ? 'w' : 'b')
 	);
 	const orientation = $derived(yourColor ?? 'white');
-
-	// Live countdown between server broadcasts.
-	function startTicker(): void {
-		if (ticker) return;
-		ticker = setInterval(() => {
-			nowMs = Date.now();
-		}, 500);
-	}
-
-	/** Remaining time for one side, draining locally between server updates. */
-	function liveMs(side: 'white' | 'black'): number {
-		if (!clock) return 0;
-		const base = side === 'white' ? clock.whiteMs : clock.blackMs;
-		if (clock.ticking !== side) return base;
-		return Math.max(0, base - (nowMs - clockAt));
-	}
-
-	function fmtClock(ms: number): string {
-		const total = Math.ceil(ms / 1000);
-		const m = Math.floor(total / 60);
-		const s = total % 60;
-		return `${m}:${String(s).padStart(2, '0')}`;
-	}
+	const sideToMove = $derived.by(() => {
+		const turn = xfen.split(' ')[1];
+		return turn?.startsWith('w') ? 'white' : turn?.startsWith('b') ? 'black' : null;
+	});
 
 	async function applyServerMove(payload: Record<string, unknown>): Promise<void> {
 		sanMoves = [...sanMoves, String(payload.san)];
@@ -185,7 +164,6 @@
 					if (joined) {
 						hydrated = true;
 						loadError = false;
-						startTicker();
 					} else if (!hydrated) {
 						loadError = true;
 					}
@@ -207,7 +185,6 @@
 
 	onDestroy(() => {
 		for (const off of socketUnsub) off();
-		if (ticker) clearInterval(ticker);
 		if (moveErrorTimer) clearTimeout(moveErrorTimer);
 	});
 
@@ -248,18 +225,14 @@
 {:else}
 	<main class="game-page">
 		<div class="board-column">
-			<div class="nameplate" class:active={xfen.split(' ')[1]?.startsWith('b')}>
-				<span class="player">{info.blackId ? 'Black' : 'Open seat'}</span>
-				<span
-					class="dial mono"
-					class:low={(clock?.blackMs ?? 99999999) < 10000}
-					class:ticking={clock?.ticking === 'black'}
-					style={clock && info.timeControl.initialMs != null ? '' : 'display:none'}
-					aria-label="Black clock"
-				>
-					{clock ? fmtClock(liveMs('black')) : '-'}
-				</span>
-			</div>
+			<ClockBar
+				{clock}
+				{clockAt}
+				timed={info.timeControl.initialMs != null}
+				turn={sideToMove}
+				whiteName="White"
+				blackName={info.blackId ? 'Black' : 'Open seat'}
+			/>
 
 			<Board
 				{xfen}
@@ -273,18 +246,14 @@
 				onMove={(uci) => void onMove(uci)}
 			/>
 
-			<div class="nameplate" class:active={xfen.split(' ')[1]?.startsWith('w')}>
-				<span class="player">White</span>
-				<span
-					class="dial mono"
-					class:low={(clock?.whiteMs ?? 99999999) < 10000}
-					class:ticking={clock?.ticking === 'white'}
-					style={clock && info.timeControl.initialMs != null ? '' : 'display:none'}
-					aria-label="White clock"
-				>
-					{clock ? fmtClock(liveMs('white')) : '-'}
-				</span>
-			</div>
+			<ClockBar
+				{clock}
+				{clockAt}
+				timed={info.timeControl.initialMs != null}
+				turn={sideToMove}
+				whiteName="White"
+				blackName={info.blackId ? 'Black' : 'Open seat'}
+			/>
 
 			{#if deadline && info.status === 'started'}
 				<p class="mono muted">
@@ -385,40 +354,6 @@
 		margin: 0.25rem 0;
 		color: var(--flag-red);
 		font-size: 13px;
-	}
-	.nameplate {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding: 0.45rem 0.7rem;
-		margin: 0.3rem 0;
-		background: var(--baize-raised);
-		border: 1px solid var(--walnut);
-		border-radius: 8px;
-		color: var(--parchment);
-		font-size: 14px;
-	}
-	.nameplate.active {
-		border-color: var(--amber);
-		box-shadow: inset 0 0 0 1px var(--amber);
-	}
-	.dial {
-		font-size: 16px;
-		background: rgb(0 0 0 / 30%);
-		padding: 0.15rem 0.55rem;
-		border-radius: 6px;
-	}
-	.dial.ticking {
-		color: var(--amber);
-	}
-	.dial.low {
-		color: var(--flag-red);
-		animation: pulse 1s infinite;
-	}
-	@keyframes pulse {
-		50% {
-			opacity: 0.6;
-		}
 	}
 	.rail {
 		background: var(--baize-raised);
