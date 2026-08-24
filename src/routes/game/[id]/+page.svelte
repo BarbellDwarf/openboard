@@ -214,6 +214,20 @@
 		const num = Math.ceil(n / 2);
 		return `${num}. ${sanMoves[n - 1]}`;
 	});
+
+	// A timeout broadcast names the winner, so the flagged seat is the other
+	// one. Players get the personal verdict; spectators get the seat name.
+	const overTerm = $derived.by(() => {
+		if (!over) return '';
+		if (over.termination === 'timeout' && over.result !== 'draw') {
+			const flagged = over.result === 'white' ? 'black' : 'white';
+			if (yourColor) {
+				return yourColor === flagged ? 'You lost on time.' : 'You won on time.';
+			}
+			return `${flagged === 'white' ? 'White' : 'Black'} ran out of time.`;
+		}
+		return terminationLabel(String(over.termination));
+	});
 </script>
 
 <svelte:head><title>Game - OpenBoard</title></svelte:head>
@@ -232,6 +246,7 @@
 				turn={sideToMove}
 				whiteName="White"
 				blackName={info.blackId ? 'Black' : 'Open seat'}
+				announceLow
 			/>
 
 			<Board
@@ -308,7 +323,7 @@
 							? 'Draw'
 							: `${over.result === 'white' ? 'White' : 'Black'} wins`}
 					</p>
-					<p class="term">{terminationLabel(String(over.termination))}</p>
+					<p class="term">{overTerm}</p>
 					{#if rematchReadyTo}
 						<a href={resolve(`/game/${rematchReadyTo}`)} class="primary button-link"
 							>Go to rematch</a
@@ -452,6 +467,16 @@
 		}
 		.rail {
 			max-height: none;
+		}
+		/* Full-bleed square: the piece area tracks the padded column, so the
+		   coordinate labels never clip at the viewport edge. */
+		.board-column {
+			--board-size: min(calc(100vw - 2.5rem), 560px);
+		}
+		button,
+		.button-link {
+			min-height: 44px;
+			font-size: 14px;
 		}
 	}
 	button:focus-visible,
