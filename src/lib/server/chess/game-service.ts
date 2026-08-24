@@ -3,7 +3,7 @@ import { and, asc, eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { games, moves as movesTable, users } from '$lib/server/db/schema';
 
-import { applyMove, drawByFiftyMoves, drawByRepetition, startPosition } from './engine';
+import { applyMove, drawByFiftyMoves, drawByThreefold, startPosition } from './engine';
 import { buildPgn } from './pgn';
 import type {
 	Color,
@@ -133,8 +133,20 @@ export async function persistMove(gameId: string, uci: string): Promise<MovePers
 	const outcome = applyMove(loaded.variant, loaded.state.xfen, uci);
 	if (!outcome.ok) return { applied: false, reason: outcome.error };
 
+	// PGN seats carry real usernames; solo games label the bot side with its
+	// strength so exported games replay with meaningful player names.
+	const [userNameWhite, userNameBlack] = await Promise.all([
+		playerName(loaded.whiteId),
+		playerName(loaded.blackId)
+	]);
+	const seatNames = {
+		white: loaded.whiteId ? userNameWhite : botSeatName(loaded.botLevel),
+		black: loaded.blackId ? userNameBlack : botSeatName(loaded.botLevel)
+	};
+	const initialXfen = startPosition(loaded.variant).xfen;
+
 	let finished: { result: ResultValue; termination: Termination } | null = outcome.finished;
-	if (!finished && drawByRepetition([...history, outcome.state.xfen]))
+	if (!finished && drawByThreefold(loaded.variant, history, outcome.state.xfen))
 		finished = { result: 'draw', termination: 'repetition' };
 	if (!finished && drawByFiftyMoves(outcome.state.xfen)) {
 		finished = { result: 'draw', termination: 'fifty-moves' };
@@ -158,8 +170,9 @@ export async function persistMove(gameId: string, uci: string): Promise<MovePers
 					pgn: buildPgn({
 						variant: loaded.variant,
 						rated: loaded.rated,
-						whiteName: 'White',
-						blackName: 'Black',
+						whiteName: seatNames.white,
+						blackName: seatNames.black,
+						initialXfen,
 						sanMoves: [...loaded.sanMoves, outcome.san],
 						result: finished?.result ?? null,
 						timeControlDescription: timeControlDescription(loaded.timeControl)
@@ -266,6 +279,12 @@ function timeControlDescription(tc: TimeControl): string {
 	const initialSeconds = Math.round((tc.initialMs ?? 0) / 1000);
 	const incrementSeconds = Math.round((tc.incrementMs ?? 0) / 1000);
 	return `${initialSeconds}+${incrementSeconds}`;
+}
+
+/** PGN label for an empty seat; solo games always have a bot level to show. */
+function botSeatName(botLevel: number | null): string {
+	if (botLevel != null) return `OpenBoard Bot (Level ${botLevel + 1})`;
+	return 'Anonymous';
 }
 
 export async function playerColorFor(gameId: string, userId: string): Promise<Color | null> {

@@ -6,6 +6,7 @@ import {
 	applyMove,
 	drawByFiftyMoves,
 	drawByRepetition,
+	drawByThreefold,
 	detectFinish,
 	loadPosition,
 	startPosition
@@ -96,6 +97,26 @@ describe('rules engine', () => {
 		const history = [fen, fen, fen];
 		expect(drawByRepetition(history)).toBe(true);
 		expect(drawByRepetition([fen])).toBe(false);
+	});
+
+	it('seeds the start position so a move-0 recurrence triggers threefold', () => {
+		// Knights out and back twice return to the starting array; the stored
+		// history then contains the start position twice, never three times.
+		let state = startPosition('standard');
+		const plies: string[] = [];
+		for (const uci of ['g1f3', 'g8f6', 'f3g1', 'f6g8', 'g1f3', 'g8f6', 'f3g1', 'f6g8']) {
+			const applied = applyMove('standard', state.xfen, uci);
+			expect(applied.ok).toBe(true);
+			if (!applied.ok) break;
+			state = applied.state;
+			plies.push(state.xfen);
+		}
+		// Unseeded post-move history sees the recurrence only twice.
+		expect(drawByRepetition(plies)).toBe(false);
+		// Seeded with ply 0, the position occurs at move 0, after 4 and after 8.
+		expect(drawByThreefold('standard', plies.slice(0, 7), plies[7])).toBe(true);
+		// A single out-and-back is one start occurrence plus one: still legal.
+		expect(drawByThreefold('standard', plies.slice(0, 3), plies[3])).toBe(false);
 	});
 
 	it('detects fifty-move draws', () => {

@@ -23,6 +23,7 @@ Edit `.env`:
 | BETTER_AUTH_SECRET                                                         | yes      | Long random string. Generate with `openssl rand -base64 32`. Required: compose refuses to start without it.                                                                     |
 | PORT / HOST                                                                | no       | Listen address for the app container. Defaults to 3000 on 0.0.0.0.                                                                                                              |
 | VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY / VAPID_SUBJECT                       | optional | Enables web push. Generate with `npx web-push generate-vapid-keys`. Subject is a `mailto:` address. Without these, in-app notifications still work but push does not.           |
+| SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASS / SMTP_FROM                  | optional | Enables outgoing email: password-reset mail, address verification, and reminder mail. See "Email (optional)" below.                                                             |
 | OIDC_ISSUER_URL / OIDC_CLIENT_ID / OIDC_CLIENT_SECRET / OIDC_PROVIDER_NAME | optional | Generic OIDC sign-in. See docs/oidc.md.                                                                                                                                         |
 
 Then:
@@ -36,6 +37,23 @@ On startup the app container applies pending database migrations before the serv
 Health check: `GET /healthz`.
 
 ## Operations
+
+### Email (optional)
+
+OpenBoard works with or without outgoing email. Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, and `SMTP_FROM` in `.env` to turn it on. Email activates when both `SMTP_HOST` and `SMTP_FROM` are set; the port defaults to 587 and TLS is automatic on port 465. The docker-compose file forwards only `DATABASE_URL`, `BETTER_AUTH_SECRET`, and `ORIGIN` into the app container, so compose users must add an `environment:` line per SMTP variable (for example `SMTP_HOST: ${SMTP_HOST}`) before `docker compose up -d`.
+
+Without any SMTP configuration:
+
+- Password recovery still works. An administrator opens `/admin/users`, presses "Reset password" for the account, and hands the one-time code to the player out of band. The player finishes at `/reset-password`. Codes are single-use and expire after 24 hours.
+- Correspondence deadline reminders arrive as in-app notifications.
+
+With SMTP configured, additionally:
+
+- The forgot-password form at `/forgot-password` emails a reset link that lands on the same `/reset-password` page.
+- New sign-ups receive a verification email. Verification is soft: sign-in never blocks on it, and unverified accounts keep playing.
+- Deadline reminders also go out by email.
+
+The forgot-password form always shows the same neutral confirmation regardless of whether the address exists, so it cannot be used to enumerate accounts.
 
 ### Manual migrations
 
