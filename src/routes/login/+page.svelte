@@ -71,6 +71,10 @@
 		</button>
 	{/if}
 
+	<p class="forgot">
+		<a href="/forgot-password">Forgot password?</a>
+	</p>
+
 	<p class="switch">
 		New here? <a href="/register">Create an account</a>
 	</p>
@@ -155,6 +159,10 @@
 	.switch {
 		margin-top: 1.25rem;
 		color: var(--parchment);
+		font-size: 14px;
+	}
+	.forgot {
+		margin: 0.75rem 0 0;
 		font-size: 14px;
 	}
 	a {

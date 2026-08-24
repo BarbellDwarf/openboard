@@ -347,6 +347,11 @@
 						{/if}
 					</div>
 				{/if}
+				{#if info.status === 'finished'}
+					<!-- The endpoint re-checks this: players any time, spectators
+					     once the game is over. -->
+					<a class="button-link" href={resolve('/api/games/[id]/pgn', { id: gameId })}>PGN</a>
+				{/if}
 			</div>
 
 			<h2>Chat</h2>
