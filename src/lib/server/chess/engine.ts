@@ -16,6 +16,7 @@ import type {
 	Termination,
 	VariantId
 } from './types';
+import { draughtsStartPosition, draughtsApplyMoveResult } from './draughts';
 
 /**
  * Pure rules layer over chessops. No database access here; persistence lives
@@ -37,6 +38,8 @@ function rulesFor(variant: VariantId): Rules {
 			return lichessRules('threeCheck');
 		case 'racingkings':
 			return lichessRules('racingKings');
+		case 'checkers':
+			throw new Error('checkers uses draughts engine, not chessops');
 		default:
 			return lichessRules(variant);
 	}
@@ -108,6 +111,7 @@ function countPockets(pockets: Position['pockets']): Record<string, number> {
 }
 
 export function startPosition(variant: VariantId): EngineState {
+	if (variant === 'checkers') return draughtsStartPosition();
 	return stateFromPosition(loadPosition(variant), variant);
 }
 
@@ -144,6 +148,18 @@ export function chess960StartFen(rand: () => number = Math.random): string {
 }
 
 export function applyMove(variant: VariantId, xfen: string, uci: string): ApplyMoveResult {
+	if (variant === 'checkers') {
+		const result = draughtsApplyMoveResult(xfen, uci);
+		if (!result.ok) return { ok: false, error: result.error as 'illegal-move' };
+		return {
+			ok: true,
+			state: result.state,
+			san: result.san,
+			uci: result.uci,
+			finished: result.finished
+		};
+	}
+
 	let pos: Position;
 	try {
 		pos = loadPosition(variant, xfen);

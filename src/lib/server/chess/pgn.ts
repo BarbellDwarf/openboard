@@ -8,7 +8,8 @@ const VARIANT_HEADERS: Record<VariantId, string> = {
 	threecheck: 'Three-check',
 	atomic: 'Atomic',
 	horde: 'Horde',
-	racingkings: 'Racing Kings'
+	racingkings: 'Racing Kings',
+	checkers: 'Checkers'
 };
 
 const STANDARD_START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';

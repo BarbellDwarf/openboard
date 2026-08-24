@@ -8,7 +8,8 @@ export const VARIANTS = [
 	'threecheck',
 	'atomic',
 	'horde',
-	'racingkings'
+	'racingkings',
+	'checkers'
 ] as const;
 
 export type VariantId = (typeof VARIANTS)[number];
@@ -36,6 +37,7 @@ export type Termination =
 	| 'atomic-king-death'
 	| 'horde-wiped'
 	| 'racingkings-finish'
+	| 'no-legal-move'
 	| 'admin-closed';
 
 export interface TimeControl {
