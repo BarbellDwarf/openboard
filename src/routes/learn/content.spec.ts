@@ -16,4 +16,23 @@ describe('learn variant pages', () => {
 			expect(page.tips.length).toBeGreaterThanOrEqual(3);
 		}
 	});
+
+	it('defines all template sections non-empty for every variant', () => {
+		for (const page of LEARN_VARIANT_PAGES) {
+			expect(page.name).toBeTruthy();
+			expect(page.tagline).toBeTruthy();
+			expect(page.blurb).toBeTruthy();
+			expect(page.atAGlance.length).toBeGreaterThanOrEqual(4);
+			expect(page.goal.length).toBeGreaterThanOrEqual(1);
+			expect(page.setup.length).toBeGreaterThanOrEqual(1);
+			expect(page.pieceMovement.length).toBeGreaterThanOrEqual(1);
+			expect(page.specialRules.length).toBeGreaterThanOrEqual(1);
+			expect(page.opening.length).toBeGreaterThanOrEqual(1);
+			expect(page.middlegame.length).toBeGreaterThanOrEqual(1);
+			expect(page.endgame.length).toBeGreaterThanOrEqual(1);
+			expect(page.mistakes.length).toBeGreaterThanOrEqual(5);
+			expect(page.timeAdvice.length).toBeGreaterThanOrEqual(1);
+			expect(page.quickReference.length).toBeGreaterThanOrEqual(3);
+		}
+	});
 });

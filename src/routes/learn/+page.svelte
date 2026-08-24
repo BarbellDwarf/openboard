@@ -16,7 +16,10 @@
 	<nav class="grid" aria-label="Learn topics">
 		<a href={resolve('/learn/basics')}>
 			<h2>Getting started</h2>
-			<p>Accounts, challenges, quick pair, clocks, correspondence, ratings, chat.</p>
+			<p>
+				Accounts, lobby fields, quick pair, board and clock reading, correspondence, Glicko-2
+				ratings, chat, finishing games, PGN export.
+			</p>
 		</a>
 
 		{#each LEARN_VARIANT_PAGES as page (page.id)}
@@ -28,7 +31,10 @@
 
 		<a href={resolve('/learn/customize')}>
 			<h2>Customize</h2>
-			<p>Board themes, piece sets, day and night session colours, sounds and motion.</p>
+			<p>
+				Board themes, piece sets, sounds and volume, motion preferences, day and night schemes, and
+				where your settings apply.
+			</p>
 		</a>
 	</nav>
 </main>
