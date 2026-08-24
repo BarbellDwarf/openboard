@@ -91,7 +91,13 @@ const ratingsMock = vi.hoisted(() => ({ applyRatedResult: vi.fn() }));
 vi.mock('$lib/server/ratings/service', () => ratingsMock);
 
 import { completeGame, persistMove } from './game-service';
-import { applyMove, chess960StartFen, loadPosition, startPosition } from './engine';
+import {
+	applyMove,
+	chess960StartFen,
+	loadPosition,
+	startPosition,
+	stateFromPosition
+} from './engine';
 
 const ratedRow = {
 	rated: true,
@@ -289,7 +295,7 @@ describe('stored PGN correctness', () => {
 			typeof (extra as { startFen?: string }).startFen === 'string'
 				? (extra as { startFen: string }).startFen
 				: startPosition(variant).xfen;
-		const state = loadPosition(variant, startFen);
+		const state = stateFromPosition(loadPosition(variant, startFen), variant);
 		const [from, tos] = Object.entries(state.dests)[0];
 		dbMock.pendingSelects.push([freshGameRow(variant, state.xfen, extra)], []);
 		dbMock.pendingSelects.push([], ...names.map((name) => [{ name }]));
