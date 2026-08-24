@@ -34,3 +34,6 @@ coverage/
 # Local docker volumes
 docker-data/
 data/postgres/
+
+# Temporary worktrees created by the issue-to-implementation pipeline
+.worktrees/

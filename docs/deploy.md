@@ -80,6 +80,16 @@ Socket.IO upgrades requests from polling to WebSocket. Whatever terminates TLS m
 - nginx: add `proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade";` to the location block.
 - Set `ORIGIN` to the exact public URL or form submissions will be rejected.
 
+### Multiple origins
+
+OpenBoard trusts exactly one origin, the `ORIGIN` environment variable you publish. If you reach the server from more than one URL, a LAN IP while you harden the reverse proxy, a test hostname plus the domain, or during a domain migration, requests from the second origin will be rejected. `better-auth` reads a comma-separated `BETTER_AUTH_TRUSTED_ORIGINS` list alongside `ORIGIN`; list every origin you use there. The docker-compose file forwards `BETTER_AUTH_TRUSTED_ORIGINS` through automatically, so just add it to `.env`:
+
+```env
+BETTER_AUTH_TRUSTED_ORIGINS=http://server.lan:3000,http://localhost:3000
+```
+
+Note that session cookies are origin-scoped: signing in through one URL does not authenticate a different URL.
+
 ## Backups
 
 Everything persistent lives in the `pgdata` volume. A nightly `pg_dump openboard > backup.sql` is sufficient.
