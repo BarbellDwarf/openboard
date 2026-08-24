@@ -91,7 +91,7 @@ const ratingsMock = vi.hoisted(() => ({ applyRatedResult: vi.fn() }));
 vi.mock('$lib/server/ratings/service', () => ratingsMock);
 
 import { completeGame, persistMove } from './game-service';
-import { applyMove, chess960StartFen, startPosition } from './engine';
+import { applyMove, chess960StartFen, loadPosition, startPosition } from './engine';
 
 const ratedRow = {
 	rated: true,
@@ -283,8 +283,13 @@ describe('stored PGN correctness', () => {
 		names: string[] = ['Alice', 'Bob']
 	): Promise<string> {
 		// Any legal opening move; hardcoded pawn pushes are illegal in some
-		// variants such as Racing Kings.
-		const state = startPosition(variant);
+		// variants such as Racing Kings. A stored startFen (shuffled Chess960)
+		// seeds both the row and the move choice.
+		const startFen =
+			typeof (extra as { startFen?: string }).startFen === 'string'
+				? (extra as { startFen: string }).startFen
+				: startPosition(variant).xfen;
+		const state = loadPosition(variant, startFen);
 		const [from, tos] = Object.entries(state.dests)[0];
 		dbMock.pendingSelects.push([freshGameRow(variant, state.xfen, extra)], []);
 		dbMock.pendingSelects.push([], ...names.map((name) => [{ name }]));

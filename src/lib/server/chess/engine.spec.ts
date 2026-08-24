@@ -168,8 +168,8 @@ describe('chess960 start positions', () => {
 
 	it('keeps the king strictly between the two rooks', () => {
 		for (let seed = 1; seed <= 64; seed++) {
-			const rank8 = chess960StartFen(seeded(seed)).split(' ')[0].split('/')[0];
-			const pieces = rank8.split('').map((p, file) => ({ p, file }));
+			const rank1 = chess960StartFen(seeded(seed)).split(' ')[0].split('/')[7];
+			const pieces = rank1.split('').map((p, file) => ({ p, file }));
 			const king = pieces.find((x) => x.p === 'K')!.file;
 			const rooks = pieces.filter((x) => x.p === 'R').map((x) => x.file);
 			expect(rooks[0] < king).toBe(true);
@@ -182,7 +182,7 @@ describe('chess960 start positions', () => {
 			const parts = chess960StartFen(seeded(seed)).split(' ');
 			const rank8 = parts[0].split('/')[0];
 			const rank1 = parts[0].split('/')[7];
-			expect(rank8).toBe(rank1.split('').reverse().join(''));
+			expect(rank8.toUpperCase()).toBe(rank1.split('').reverse().join(''));
 		}
 	});
 
