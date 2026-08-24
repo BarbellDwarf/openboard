@@ -14,6 +14,7 @@ import type { LobbySpeed } from '$lib/server/matchmaking';
 import type { RequestHandler } from './$types';
 
 const SPEEDS = ['bullet', 'blitz', 'rapid', 'classical', 'correspondence'] as const;
+const COLOR_CHOICES = ['random', 'white', 'black'] as const;
 
 export const GET: RequestHandler = async () => {
 	const { listOpenChallenges } = await import('$lib/server/matchmaking');
@@ -36,6 +37,14 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	const speed = (body.speedClass ?? 'blitz') as LobbySpeed;
 	const variant = (body.variant ?? 'standard') as VariantId;
 	if (!SPEEDS.includes(speed) || !VARIANTS.includes(variant)) {
+		return json({ ok: false, reason: 'bad-params' }, { status: 422 });
+	}
+	// Absent means the caller does not care; anything outside the enum would
+	// otherwise be stored verbatim or silently coerced to white downstream.
+	if (
+		body.colorChoice !== undefined &&
+		!(COLOR_CHOICES as readonly string[]).includes(body.colorChoice)
+	) {
 		return json({ ok: false, reason: 'bad-params' }, { status: 422 });
 	}
 

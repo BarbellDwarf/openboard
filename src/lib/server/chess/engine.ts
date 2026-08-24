@@ -201,6 +201,20 @@ export function drawByRepetition(xfenHistory: string[]): boolean {
 	return count >= 3;
 }
 
+/**
+ * Stored ply history only holds positions AFTER each played move; ply 0 (the
+ * variant's start position) never appears among them. Seed it here, or a
+ * position occurring at move 0 plus twice later counts twice and never
+ * reaches the threefold threshold.
+ */
+export function drawByThreefold(
+	variant: VariantId,
+	xfensAfterEachPly: string[],
+	latestXfen: string
+): boolean {
+	return drawByRepetition([startPosition(variant).xfen, ...xfensAfterEachPly, latestXfen]);
+}
+
 export function drawByFiftyMoves(xfen: string): boolean {
 	const halfmoves = Number.parseInt(xfen.split(' ')[4] ?? '0', 10);
 	return halfmoves >= 100;
