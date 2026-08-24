@@ -36,25 +36,27 @@
 	{#if data.rows.length === 0}
 		<p class="empty">No rated games in this pool yet. Be the first.</p>
 	{:else}
-		<table>
-			<thead>
-				<tr
-					><th scope="col">#</th><th scope="col">Player</th><th scope="col">Rating</th><th
-						scope="col">Games</th
-					></tr
-				>
-			</thead>
-			<tbody>
-				{#each data.rows as row, i (row.name)}
-					<tr>
-						<td class="mono">{i + 1}</td>
-						<td>{row.name}</td>
-						<td class="mono">{Math.round(row.rating)}{row.deviation >= 350 ? '?' : ''}</td>
-						<td class="mono">{row.gamesPlayed}</td>
-					</tr>
-				{/each}
-			</tbody>
-		</table>
+		<div class="table-scroll">
+			<table>
+				<thead>
+					<tr
+						><th scope="col">#</th><th scope="col">Player</th><th scope="col">Rating</th><th
+							scope="col">Games</th
+						></tr
+					>
+				</thead>
+				<tbody>
+					{#each data.rows as row, i (row.name)}
+						<tr>
+							<td class="mono">{i + 1}</td>
+							<td>{row.name}</td>
+							<td class="mono">{Math.round(row.rating)}{row.deviation >= 350 ? '?' : ''}</td>
+							<td class="mono">{row.gamesPlayed}</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
 	{/if}
 </main>
 
@@ -131,9 +133,36 @@
 	.empty {
 		color: var(--parchment);
 	}
+	/* Narrow screens scroll the table inside its own panel; the page itself
+	   never grows a horizontal scrollbar. */
+	.table-scroll {
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
 	a:focus-visible,
 	button:focus-visible {
 		outline: 2px solid var(--amber);
 		outline-offset: 2px;
+	}
+	@media (max-width: 640px) {
+		.leaderboard {
+			margin-top: 1rem;
+		}
+		table {
+			min-width: 340px;
+		}
+		th,
+		td {
+			padding: 0.5rem 0.6rem;
+		}
+		.filters {
+			gap: 0.4rem;
+		}
+		.filters a {
+			display: inline-flex;
+			align-items: center;
+			min-height: 44px;
+			padding: 0.5rem 0.9rem;
+		}
 	}
 </style>

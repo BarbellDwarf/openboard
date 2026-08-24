@@ -53,36 +53,38 @@
 	{#if data.users.length === 0}
 		<p class="empty">No accounts yet.</p>
 	{:else}
-		<table>
-			<thead>
-				<tr
-					><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Role</th><th
-						scope="col">Joined</th
-					><th scope="col"><span class="visually-hidden">Actions</span></th></tr
-				>
-			</thead>
-			<tbody>
-				{#each data.users as u (u.id)}
-					<tr>
-						<td>{u.name}</td>
-						<td>
-							{u.email}
-							<span class="verified">({u.emailVerified ? 'verified' : 'unverified'})</span>
-						</td>
-						<td class="role">{u.admin ? 'Admin' : 'User'}</td>
-						<td class="mono">{fmtDate(u.createdAtMs)}</td>
-						<td>
-							<form method="POST" action="?/resetPassword" onsubmit={() => (busyFor = u.id)}>
-								<input type="hidden" name="userId" value={u.id} />
-								<button type="submit" class="secondary small" disabled={busyFor !== null}>
-									{busyFor === u.id ? 'Generating' : 'Reset password'}
-								</button>
-							</form>
-						</td>
-					</tr>
-				{/each}
-			</tbody>
-		</table>
+		<div class="table-scroll">
+			<table>
+				<thead>
+					<tr
+						><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Role</th><th
+							scope="col">Joined</th
+						><th scope="col"><span class="visually-hidden">Actions</span></th></tr
+					>
+				</thead>
+				<tbody>
+					{#each data.users as u (u.id)}
+						<tr>
+							<td>{u.name}</td>
+							<td>
+								{u.email}
+								<span class="verified">({u.emailVerified ? 'verified' : 'unverified'})</span>
+							</td>
+							<td class="role">{u.admin ? 'Admin' : 'User'}</td>
+							<td class="mono">{fmtDate(u.createdAtMs)}</td>
+							<td>
+								<form method="POST" action="?/resetPassword" onsubmit={() => (busyFor = u.id)}>
+									<input type="hidden" name="userId" value={u.id} />
+									<button type="submit" class="secondary small" disabled={busyFor !== null}>
+										{busyFor === u.id ? 'Generating' : 'Reset password'}
+									</button>
+								</form>
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
 	{/if}
 </main>
 
@@ -205,5 +207,26 @@
 		overflow: hidden;
 		clip: rect(0 0 0 0);
 		white-space: nowrap;
+	}
+	/* Narrow screens scroll the table inside its own panel; the page itself
+	   never grows a horizontal scrollbar. */
+	.table-scroll {
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+	@media (max-width: 640px) {
+		.members {
+			margin-top: 1rem;
+		}
+		table {
+			min-width: 560px;
+		}
+		th,
+		td {
+			padding: 0.5rem 0.6rem;
+		}
+		button.secondary {
+			min-height: 44px;
+		}
 	}
 </style>

@@ -83,4 +83,18 @@
 	.muted {
 		color: color-mix(in srgb, var(--parchment) 65%, transparent);
 	}
+	@media (max-width: 640px) {
+		.games {
+			margin-top: 1rem;
+		}
+		li {
+			flex-wrap: wrap;
+			row-gap: 0.25rem;
+		}
+		li a {
+			display: inline-flex;
+			align-items: center;
+			min-height: 44px;
+		}
+	}
 </style>

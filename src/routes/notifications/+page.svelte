@@ -117,4 +117,24 @@
 		outline: 2px solid var(--amber);
 		outline-offset: 2px;
 	}
+	@media (max-width: 640px) {
+		.notif {
+			margin-top: 1rem;
+		}
+		/* Type and action share the first row; the message wraps below at
+		   full width instead of truncating into a sliver. */
+		li {
+			flex-wrap: wrap;
+		}
+		.body {
+			order: 3;
+			flex-basis: 100%;
+			white-space: normal;
+			overflow: visible;
+			text-overflow: unset;
+		}
+		button {
+			min-height: 44px;
+		}
+	}
 </style>
