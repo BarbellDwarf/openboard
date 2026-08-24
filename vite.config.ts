@@ -58,6 +58,12 @@ export default defineConfig({
 				background_color: '#0f1b14',
 				theme_color: '#e8a33d',
 				categories: ['games'],
+				// Carried over from the removed static/manifest.webmanifest so
+				// this generated manifest stays the single source of truth.
+				shortcuts: [
+					{ name: 'Lobby', url: '/lobby' },
+					{ name: 'Play a bot', url: '/play-bot' }
+				],
 				icons: [
 					{ src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
 					{ src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },

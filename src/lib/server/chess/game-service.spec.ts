@@ -58,7 +58,16 @@ const dbMock = vi.hoisted(() => {
 		async transaction(callback: (tx: unknown) => Promise<unknown>) {
 			return callback({
 				insert: () => ({ values: async () => {} }),
-				update: () => ({ set: () => ({ where: async () => {} }) })
+				update(_table: unknown) {
+					const builder = {
+						set(values: unknown) {
+							lastStatement.set = values;
+							return builder;
+						},
+						where: async () => {}
+					};
+					return builder;
+				}
 			});
 		}
 	};
@@ -233,5 +242,97 @@ describe('post-move finish reporting', () => {
 		const result = await playMatingMove();
 		expect(result.applied).toBe(true);
 		expect(result.finished).toBeNull();
+	});
+});
+
+describe('stored PGN correctness', () => {
+	// First move of a fresh two-player game; loadGame replays zero rows, so
+	// the pre-move position equals the variant's start xfen exactly.
+	function freshGameRow(
+		variant: 'standard' | 'chess960' | 'racingkings',
+		startXfen: string,
+		extra = {}
+	) {
+		return {
+			id: 'game-pgn',
+			variant,
+			rated: false,
+			status: 'started',
+			result: null,
+			termination: null,
+			initialMs: 300_000,
+			incrementMs: 2_000,
+			daysPerMove: null,
+			currentXfen: startXfen,
+			pgn: null,
+			moveCount: 0,
+			whiteId: '11111111-1111-1111-1111-111111111111',
+			blackId: '22222222-2222-2222-2222-222222222222',
+			botLevel: null,
+			createdAt: new Date(1_000),
+			startedAt: new Date(1_000),
+			finishedAt: null,
+			lastMoveAt: new Date(2_000),
+			...extra
+		};
+	}
+
+	async function playFirstMove(
+		variant: 'standard' | 'chess960' | 'racingkings',
+		extra = {},
+		names: string[] = ['Alice', 'Bob']
+	): Promise<string> {
+		// Any legal opening move; hardcoded pawn pushes are illegal in some
+		// variants such as Racing Kings.
+		const state = startPosition(variant);
+		const [from, tos] = Object.entries(state.dests)[0];
+		dbMock.pendingSelects.push([freshGameRow(variant, state.xfen, extra)], []);
+		dbMock.pendingSelects.push([], ...names.map((name) => [{ name }]));
+		await persistMove('game-pgn', `${from}${tos[0]}`);
+		const set = dbMock.lastStatement.set as { pgn?: string } | undefined;
+		return String(set?.pgn);
+	}
+
+	it('embeds SetUp/FEN and real seat names for non-standard variants', async () => {
+		// Racing Kings starts from a different board entirely, so without the
+		// FEN header exporters would replay the game from the standard array.
+		const startXfen = startPosition('racingkings').xfen;
+		const pgn = await playFirstMove('racingkings');
+		expect(pgn).toContain('[Variant "Racing Kings"]');
+		expect(pgn).toContain('[SetUp "1"]');
+		expect(pgn).toContain(`[FEN "${startXfen}"]`);
+		expect(pgn).toContain('[White "Alice"]');
+		expect(pgn).toContain('[Black "Bob"]');
+	});
+
+	it('omits SetUp/FEN when the variant start equals the standard array', async () => {
+		// Chess960 games here always begin from the default array, identical
+		// to the standard start string, so buildPgn's dedup keeps the PGN clean
+		// and replay from the implicit standard start stays correct.
+		const pgn = await playFirstMove('chess960');
+		expect(pgn).toContain('[Variant "Chess960"]');
+		expect(pgn).not.toContain('[SetUp');
+		expect(pgn).not.toContain('[FEN ');
+	});
+
+	it('labels the bot seat with its strength in solo games', async () => {
+		// Solo game: black seat is a level-id 2 bot ("Level 3" in the lobby UI).
+		// playerName skips its query for the null seat, so one name select runs.
+		const pgn = await playFirstMove('standard', { blackId: null, botLevel: 2 }, ['Alice']);
+		expect(pgn).toContain('[White "Alice"]');
+		expect(pgn).toContain('[Black "OpenBoard Bot (Level 3)"]');
+	});
+
+	it('keeps standard-chess headers byte-shaped without SetUp/FEN or Variant', async () => {
+		const pgn = await playFirstMove('standard');
+		expect(pgn.split('\n\n')[0].split('\n')).toEqual([
+			'[Event "OpenBoard casual game"]',
+			'[Site "OpenBoard"]',
+			`[Date "${new Date().toISOString().slice(0, 10).replace(/-/g, '.')}"]`,
+			'[White "Alice"]',
+			'[Black "Bob"]',
+			'[Result "*"]',
+			'[TimeControl "300+2"]'
+		]);
 	});
 });

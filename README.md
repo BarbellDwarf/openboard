@@ -10,7 +10,7 @@ Existing chess servers are either hosted services you cannot control, or heavywe
 
 ## Planned features
 
-- **Accounts**: register and sign in with email and password. Sessions persist across devices.
+- **Accounts**: register and sign in with email and password. Sessions persist across devices. Passwords are recoverable through an admin-issued one-time code, or by email when the server has SMTP configured.
 - **Live games**: real-time play over WebSockets with clocks for bullet through classical time controls.
 - **Correspondence games**: days-per-move time controls for games that run over weeks, with deadline display and automatic loss when a player oversteps.
 - **Variants**: standard chess, Chess960, Crazyhouse, King of the Hill, Three-check, Atomic, Horde, and Racing Kings.
@@ -18,7 +18,7 @@ Existing chess servers are either hosted services you cannot control, or heavywe
 - **Live board updates**: moves from your opponent appear instantly, including while you have the page open in the background.
 - **Chat**: per-game chat alongside the board during live games.
 - **Customization**: multiple board themes, piece sets, sound options, animation toggles, and board coordinates.
-- **Notifications**: in-app notifications plus optional web push for challenge responses, draw offers, and game results.
+- **Notifications**: in-app notifications plus optional web push for challenge responses, draw offers, and game results. Correspondence games warn the player on the move before their clock runs out, in-app and by email when SMTP is configured.
 - **Progressive web app**: installable on desktop and mobile, served from an offline app shell.
 - **Responsive design**: the same interface adapts from phone to desktop.
 
@@ -41,8 +41,13 @@ The first account created through `/setup` holds the `admin` role. Administrator
 - Close any running game. The game finalizes as a draw marked "closed by a moderator".
 - Delete any chat message. Authors can always delete their own messages.
 - View the member roster at `/admin/users`, listing names, emails, roles, and join dates.
+- Issue a single-use password reset code for any account. The code is shown once, expires in 24 hours, and works on servers with no outgoing email.
 
 Every moderation power is enforced on the server. Roles live in the `users.role` column and default to `user`.
+
+## Email
+
+Email is optional. Without SMTP credentials, password recovery runs through admin-issued reset codes and deadline reminders stay in-app. With SMTP configured (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`), forgot-password emails, sign-up verification mail (soft: sign-in never blocks), and reminder email turn on. See docs/deploy.md for details.
 
 ## Tech stack
 
