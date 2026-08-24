@@ -57,6 +57,11 @@
 		margin: 2rem auto 0;
 		padding: 0 1rem 2.5rem;
 	}
+	.crumbs a {
+		display: inline-block;
+		min-height: 24px;
+		line-height: 24px;
+	}
 	.crumbs {
 		display: flex;
 		gap: 0.4rem;

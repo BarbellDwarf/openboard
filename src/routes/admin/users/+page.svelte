@@ -54,7 +54,6 @@
 		<p class="empty">No accounts yet.</p>
 	{:else}
 		<div class="table-scroll">
-			<div class="table-scroll">
 			<table>
 				<thead>
 					<tr
