@@ -166,7 +166,10 @@ export async function persistMove(gameId: string, uci: string): Promise<MovePers
 	const initialXfen = loaded.startFen ?? startPosition(loaded.variant).xfen;
 
 	let finished: { result: ResultValue; termination: Termination } | null = outcome.finished;
-	if (!finished && drawByThreefold(loaded.variant, history, outcome.state.xfen, loaded.startFen ?? undefined))
+	if (
+		!finished &&
+		drawByThreefold(loaded.variant, history, outcome.state.xfen, loaded.startFen ?? undefined)
+	)
 		finished = { result: 'draw', termination: 'repetition' };
 	if (!finished && drawByFiftyMoves(outcome.state.xfen)) {
 		finished = { result: 'draw', termination: 'fifty-moves' };
