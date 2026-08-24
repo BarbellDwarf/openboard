@@ -124,7 +124,7 @@
 	}
 	button.primary {
 		background: var(--amber);
-		color: #211b10;
+		color: var(--on-primary);
 		font-weight: 600;
 	}
 	button.primary:hover {

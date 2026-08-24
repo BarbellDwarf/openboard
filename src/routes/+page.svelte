@@ -170,6 +170,11 @@
 		margin: 3rem auto 0;
 		padding: 0 1rem;
 	}
+	/* The board inside is width:100%, so the stack must not size to max-content
+	   (circular with a percentage --board-size) or the hero board collapses to 0. */
+	.hero-board :global(.board-stack) {
+		width: 100%;
+	}
 	.copy h1 {
 		font-family: 'Marcellus', serif;
 		color: var(--parchment);

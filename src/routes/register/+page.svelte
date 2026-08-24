@@ -114,7 +114,7 @@
 		font-size: 15px;
 		margin-top: 1rem;
 		background: var(--amber);
-		color: #211b10;
+		color: var(--on-primary);
 		font-weight: 600;
 	}
 	button:hover {
