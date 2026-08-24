@@ -57,4 +57,26 @@ describe('migration sql', () => {
 		expect(sql).toContain('ADD COLUMN IF NOT EXISTS "bot_level"');
 		expect(sql).toContain('integer');
 	});
+
+	it('creates the password reset token table keyed by hash, not raw token', async () => {
+		const sql = await readFile(path.join(MIGRATIONS_DIR, '0004_password_reset_tokens.sql'), 'utf8');
+		expect(sql).toContain('CREATE TABLE IF NOT EXISTS "password_reset_tokens"');
+		expect(sql).toContain('"token_hash" text NOT NULL');
+		expect(sql).not.toMatch(/"token" text NOT NULL/);
+		expect(sql).toContain('"expires_at" timestamp with time zone NOT NULL');
+		expect(sql).toContain('"used_at" timestamp with time zone');
+		expect(sql).toContain('CREATE UNIQUE INDEX IF NOT EXISTS "password_reset_tokens_hash_key"');
+	});
+
+	it('creates the reminder table with one row per game and player', async () => {
+		const sql = await readFile(
+			path.join(MIGRATIONS_DIR, '0005_correspondence_reminders.sql'),
+			'utf8'
+		);
+		expect(sql).toContain('CREATE TABLE IF NOT EXISTS "correspondence_reminders"');
+		expect(sql).toContain(
+			'CREATE UNIQUE INDEX IF NOT EXISTS "correspondence_reminders_game_user_key"'
+		);
+		expect(sql).toContain('ON DELETE CASCADE');
+	});
 });
