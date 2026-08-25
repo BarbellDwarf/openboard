@@ -392,6 +392,10 @@
 		position: relative;
 		width: var(--board-size, min(92vw, 560px));
 		user-select: none;
+		/* Size container for the CSS-art piece sets: their glyphs are sized in
+		   cqw so a token scales with the board instead of the page font. */
+		container-name: ob-board;
+		container-type: inline-size;
 	}
 	.ob-board {
 		position: relative;
