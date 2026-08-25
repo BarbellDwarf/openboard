@@ -155,7 +155,11 @@
 						class:selected={pieceSet === p.id}
 						onclick={() => (pieceSet = p.id)}
 					>
-						<img src="/pieces/{p.id}/wK.svg" alt="" />
+						{#if p.id === 'cburnett'}
+							<img src="/pieces/{p.id}/wK.svg" alt="" />
+						{:else}
+							<span class="glyph-chip {p.id}" aria-hidden="true">♚</span>
+						{/if}
 						{p.name}
 					</button>
 				{/each}
@@ -279,9 +283,40 @@
 	.theme-contrast.swatch {
 		background: conic-gradient(#ffffff 0 25%, #212121 0 50%, #ffffff 0 75%, #212121 0) 0 0 / 25% 25%;
 	}
+	.theme-forest.swatch {
+		background: conic-gradient(#90b890 0 25%, #2d4a2d 0 50%, #90b890 0 75%, #2d4a2d 0) 0 0 / 25% 25%;
+	}
+	.theme-ocean.swatch {
+		background: conic-gradient(#a0c4d8 0 25%, #1a3a5a 0 50%, #a0c4d8 0 75%, #1a3a5a 0) 0 0 / 25% 25%;
+	}
 	.pick img {
 		width: 44px;
 		height: 44px;
+	}
+	/* Miniature of the CSS-art medallion tokens; the static SVG files for
+	   these sets no longer exist, so the preview renders the same art. */
+	.glyph-chip {
+		width: 44px;
+		height: 44px;
+		border-radius: 9px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 30px;
+		line-height: 1;
+	}
+	.glyph-chip.arcane {
+		background: linear-gradient(160deg, #f3eefb, #b9aed8);
+		border: 2px solid #6a5aa8;
+		color: #2c2350;
+		text-shadow:
+			1px 1px 0 rgba(243, 238, 251, 0.55),
+			-1px -1px 0 rgba(44, 35, 80, 0.3);
+	}
+	.glyph-chip.draconic {
+		background: linear-gradient(160deg, #f5e7cd, #ccb28a);
+		border: 2px solid #7d2a1c;
+		color: #7d2214;
 	}
 	.toggles {
 		display: flex;

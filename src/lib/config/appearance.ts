@@ -25,7 +25,9 @@ export const BOARD_THEMES: readonly BoardTheme[] = [
 	{ id: 'slate', name: 'Slate' },
 	{ id: 'cherry', name: 'Cherry' },
 	{ id: 'marble', name: 'Marble' },
-	{ id: 'contrast', name: 'High contrast' }
+	{ id: 'contrast', name: 'High contrast' },
+	{ id: 'forest', name: 'Forest' },
+	{ id: 'ocean', name: 'Ocean' }
 ];
 
 /** Piece artwork sets rendered on the board. */
