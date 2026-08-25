@@ -185,7 +185,7 @@
 			})
 		});
 		const body = await res.json();
-		if (body.gameId) goto(`/play-bot/${body.gameId}?level=${urlLevel}`, { invalidateAll: true });
+		if (body.gameId) window.location.href = `/play-bot/${body.gameId}?level=${urlLevel}`;
 	}
 
 	onMount(() => {
