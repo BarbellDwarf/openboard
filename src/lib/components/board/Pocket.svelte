@@ -66,7 +66,7 @@
 		background: var(--baize-raised);
 		border: 1px solid var(--walnut);
 		border-radius: 8px;
-		min-height: 46px;
+		min-height: 44px;
 	}
 	.tray:last-child {
 		margin-bottom: 0;
