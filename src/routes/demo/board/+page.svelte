@@ -11,7 +11,6 @@
 	let dests = $state<Record<string, string[]>>({});
 	let lastMove = $state<[string, string] | null>(null);
 	let checkSquare = $state<string | null>(null);
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars -- drives checkSquare updates
 
 	async function post(uci?: string): Promise<void> {
 		const res = await fetch('/api/demo/move', {
