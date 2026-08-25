@@ -287,7 +287,7 @@
 			<p class="move-error" role="alert">{moveError}</p>
 		{/if}
 		{#if timed}
-			<!-- Opponent bar above, your bar below — standard game layout. -->
+			<!-- Opponent bar above, your bar below, matching the live game layout. -->
 			<ClockBar
 				{clock}
 				{clockAt}
@@ -321,22 +321,26 @@
 			/>
 		{/if}
 	</div>
-	<aside class="rail">
+	<aside class="rail" aria-label="Moves and controls">
 		<h2>Moves</h2>
-		<ol class="mono">
+		<ol class="scoresheet mono" aria-label="Move list">
 			{#each sanMoves as san, i (i)}
 				<li><span class="plyno">{Math.floor(i / 2) + 1}{i % 2 === 0 ? '.' : ''}</span> {san}</li>
+			{:else}
+				<li class="empty">No moves yet.</li>
 			{/each}
 		</ol>
 		{#if botThinking}<p class="thinking">Bot is thinking...</p>{/if}
-		{#if !over}
-			<button type="button" class="danger" onclick={() => void gameChannel.resign(gameId)}>
-				Resign
-			</button>
-		{:else}
-			<button type="button" class="primary" onclick={() => void playAgain()}> Play again </button>
-			<a class="again" href="/play-bot">New settings</a>
-		{/if}
+		<div class="controls">
+			{#if !over}
+				<button type="button" class="danger" onclick={() => void gameChannel.resign(gameId)}>
+					Resign
+				</button>
+			{:else}
+				<button type="button" class="primary" onclick={() => void playAgain()}>Play again</button>
+				<a class="button-link" href="/play-bot">New settings</a>
+			{/if}
+		</div>
 		<h2>Chat</h2>
 		<ChatPanel {gameId} />
 	</aside>
@@ -350,38 +354,54 @@
 		justify-content: center;
 		padding: 1.25rem;
 	}
+	.board-column {
+		align-self: start;
+	}
 	.muted {
 		color: color-mix(in srgb, var(--parchment) 65%, transparent);
 		font-size: 13px;
-	}
-	h2 {
-		color: var(--parchment);
-		font-size: 16px;
-		margin: 0 0 0.5rem;
 	}
 	.rail {
 		background: var(--baize-raised);
 		border: 1px solid var(--walnut);
 		border-radius: 8px;
 		padding: 0.9rem;
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
 		max-height: calc(100vh - 140px);
 		overflow-y: auto;
 	}
-	.scoresheet,
-	ol {
+	h2 {
+		font-family: 'Marcellus', serif;
+		color: var(--parchment);
+		font-size: 18px;
+		margin: 0;
+	}
+	.scoresheet {
 		list-style: none;
-		margin: 0 0 0.75rem;
+		margin: 0;
 		padding: 0;
+		flex: 1;
+		max-height: 12rem;
+		overflow-y: auto;
 		columns: 2 auto;
+		column-gap: 1rem;
 		color: var(--parchment);
 		font-size: 13px;
 	}
-	.plyno {
-		color: var(--walnut);
+	.scoresheet li {
+		break-inside: avoid;
+		padding: 0.1rem 0;
+	}
+	.plyno,
+	.empty {
+		color: var(--text-muted);
 	}
 	.thinking {
 		color: var(--amber);
 		font-size: 13px;
+		margin: 0;
 	}
 	.over {
 		color: var(--amber);
@@ -393,38 +413,63 @@
 		font-size: 13px;
 		margin: 0.25rem 0 0.5rem;
 	}
-	button.danger {
-		padding: 0.45rem 0.9rem;
-		border-radius: 8px;
-		border: 1px solid var(--flag-red);
+	.controls {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+	button,
+	.button-link {
+		flex: 1 1 45%;
+		padding: 0.45rem;
+		border-radius: 6px;
+		border: 1px solid var(--walnut);
 		background: transparent;
-		color: var(--flag-red);
+		color: var(--parchment);
 		cursor: pointer;
 		font-size: 13px;
-	}
-	a.again {
-		display: inline-block;
-		padding: 0.45rem 0.9rem;
-		border-radius: 8px;
-		background: var(--amber);
-		color: var(--on-primary);
 		text-decoration: none;
-		font-size: 13px;
+		text-align: center;
+	}
+	button.primary {
+		background: var(--amber);
+		border-color: var(--amber);
+		color: var(--on-primary);
 		font-weight: 600;
+	}
+	button.danger {
+		border-color: var(--flag-red);
+	}
+	button:hover,
+	.button-link:hover {
+		border-color: var(--amber);
+	}
+	button.danger:hover {
+		border-color: var(--flag-red);
+		background: color-mix(in srgb, var(--flag-red) 15%, transparent);
+	}
+	button:focus-visible,
+	.button-link:focus-visible {
+		outline: 2px solid var(--amber);
+		outline-offset: 2px;
 	}
 	@media (max-width: 800px) {
 		.bot-page {
 			grid-template-columns: 1fr;
+		}
+		.rail {
+			max-height: none;
 		}
 		/* Full-bleed square: the piece area tracks the padded column, so the
 		   coordinate labels never clip at the viewport edge. */
 		.board-column {
 			--board-size: min(calc(100vw - 2.5rem), 560px);
 		}
-		button.danger,
-		a.again {
+		button,
+		.button-link {
 			display: inline-flex;
 			align-items: center;
+			justify-content: center;
 			min-height: 44px;
 			font-size: 14px;
 		}
