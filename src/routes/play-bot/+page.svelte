@@ -130,7 +130,7 @@
 <style>
 	.panel {
 		max-width: 26rem;
-		margin: 3rem auto;
+		margin: 1.5rem auto 2rem;
 		padding: 1.5rem;
 		border: 1px solid var(--walnut);
 		border-radius: 12px;
