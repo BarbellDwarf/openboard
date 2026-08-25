@@ -20,7 +20,8 @@
 		{ href: '/leaderboard', label: 'Leaderboards' },
 		{ href: '/games', label: 'My games' },
 		{ href: '/play-bot', label: 'Play a bot' },
-		{ href: '/learn', label: 'Learn' }
+		{ href: '/learn', label: 'Learn' },
+		{ href: '/settings/appearance', label: 'Settings' }
 	];
 
 	// Feed the caller's saved appearance into the shared client store so every
