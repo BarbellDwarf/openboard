@@ -298,7 +298,7 @@
 	.glyph-chip {
 		width: 44px;
 		height: 44px;
-		border-radius: 8px;
+		border-radius: 9px;
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;

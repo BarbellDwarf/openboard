@@ -203,9 +203,20 @@
 				showMoveError(
 					res.reason === 'not-your-turn' ? 'It is not your turn.' : 'The server rejected that move.'
 				);
+				// The board already applied the move optimistically, and no
+				// broadcast will come (nothing changed server-side). Re-join so
+				// the board and dests snap back to server truth.
+				const joined = await gameChannel.join(gameId);
+				hydrateFromJoin(joined);
 			}
 		} catch {
 			showMoveError('That move did not reach the server. You can try again.');
+			// The move may or may not have landed; only the server knows.
+			try {
+				hydrateFromJoin(await gameChannel.join(gameId));
+			} catch {
+				/* keep showing the move error; the reconnect handler re-syncs */
+			}
 		}
 	}
 

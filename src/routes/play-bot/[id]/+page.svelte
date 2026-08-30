@@ -145,6 +145,41 @@
 		moveErrorTimer = setTimeout(() => (moveError = null), 4000);
 	}
 
+	let syncing = false;
+	/** Re-join and redraw everything from the authoritative join payload. */
+	async function syncFromServer(): Promise<void> {
+		if (syncing) return;
+		syncing = true;
+		try {
+			const join: JoinResponse = await gameChannel.join(gameId);
+			if (!join.ok || !join.state) return;
+			info = join.game ?? null;
+			orientation = info?.yourColor === 'black' ? 'black' : 'white';
+			// Re-sync on every reconnect: the join ack is the authoritative
+			// clock snapshot, so draining restarts from it without drift.
+			clock = (join.clock as ClockView | null) ?? null;
+			clockAt = Date.now();
+			if (info?.status === 'finished') {
+				over = {
+					result: String(info.result ?? 'draw'),
+					termination: String(info.termination ?? '')
+				};
+			}
+			applyState({
+				state: join.state as {
+					xfen: string;
+					dests: DestMap;
+					inCheck: boolean;
+					pockets?: Record<string, number>;
+				}
+			});
+			sanMoves = join.sanMoves ?? [];
+			syncThinking();
+		} finally {
+			syncing = false;
+		}
+	}
+
 	async function onMove(uci: string): Promise<void> {
 		moveError = null;
 		try {
@@ -153,9 +188,17 @@
 				showMoveError(
 					res.reason === 'not-your-turn' ? 'It is not your turn.' : 'The server rejected that move.'
 				);
+				// No broadcast follows a rejection; undo the optimistic board
+				// move by re-syncing from the join payload.
+				await syncFromServer();
 			}
 		} catch {
 			showMoveError('That move did not reach the server. You can try again.');
+			try {
+				await syncFromServer();
+			} catch {
+				/* the reconnect handler re-syncs */
+			}
 		}
 	}
 
@@ -221,41 +264,6 @@
 			// event (first one included) re-joins and refreshes from the
 			// authoritative payload. The in-flight guard collapses the cold-load
 			// overlap between the kick-off below and the first 'connect'.
-			let syncing = false;
-			const syncFromServer = async (): Promise<void> => {
-				if (syncing) return;
-				syncing = true;
-				try {
-					const join: JoinResponse = await gameChannel.join(gameId);
-					if (!join.ok || !join.state) return;
-					info = join.game ?? null;
-					orientation = info?.yourColor === 'black' ? 'black' : 'white';
-					// Re-sync on every reconnect: the join ack is the authoritative
-					// clock snapshot, so draining restarts from it without drift.
-					clock = (join.clock as ClockView | null) ?? null;
-					clockAt = Date.now();
-					if (info?.status === 'finished') {
-						over = {
-							result: String(info.result ?? 'draw'),
-							termination: String(info.termination ?? '')
-						};
-					}
-					applyState({
-						state: join.state as {
-							xfen: string;
-							dests: DestMap;
-							inCheck: boolean;
-							pockets?: Record<string, number>;
-						}
-					});
-					sanMoves = join.sanMoves ?? [];
-					syncThinking();
-				} catch {
-					// Join failed or timed out; the next connect event retries it.
-				} finally {
-					syncing = false;
-				}
-			};
 			const onConnect = (): void => {
 				void syncFromServer();
 			};
