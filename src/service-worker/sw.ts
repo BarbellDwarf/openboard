@@ -38,13 +38,25 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
 	event.notification.close();
-	const url = (event.notification.data as { url?: string })?.url ?? '/';
+	const raw = (event.notification.data as { url?: string })?.url ?? '/';
+	// Resolve against our origin, then match windows exactly: a bare '/' must
+	// only focus a window that IS the home page, never any other window.
+	let target: URL;
+	try {
+		target = new URL(raw, self.location.origin);
+	} catch {
+		target = new URL('/', self.location.origin);
+	}
 	event.waitUntil(
-		self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
-			for (const client of clients) {
-				if (client.url.includes(url)) return client.focus();
+		(async () => {
+			const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+			for (const client of windows) {
+				if (client.url === target.href) {
+					await client.focus();
+					return;
+				}
 			}
-			return self.clients.openWindow(url);
-		})
+			await self.clients.openWindow(target.href);
+		})()
 	);
 });
