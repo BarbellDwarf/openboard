@@ -398,8 +398,8 @@
 		list-style: none;
 		margin: 0;
 		padding: 0;
+		max-height: 12rem;
 		overflow-y: auto;
-		flex: 1;
 		font-size: 13px;
 		color: var(--parchment);
 		columns: 2 auto;
@@ -410,7 +410,7 @@
 		padding: 0.1rem 0;
 	}
 	.plyno {
-		color: var(--walnut);
+		color: var(--text-muted);
 	}
 	.controls {
 		display: flex;

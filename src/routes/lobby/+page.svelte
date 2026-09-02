@@ -138,7 +138,7 @@
 <style>
 	.lobby {
 		max-width: 720px;
-		margin: 2rem auto 0;
+		margin: 1.25rem auto 0;
 		padding: 0 1rem;
 		display: flex;
 		flex-direction: column;

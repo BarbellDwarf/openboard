@@ -130,7 +130,7 @@
 <style>
 	.panel {
 		max-width: 26rem;
-		margin: 3rem auto;
+		margin: 1.5rem auto 2rem;
 		padding: 1.5rem;
 		border: 1px solid var(--walnut);
 		border-radius: 12px;
@@ -171,14 +171,29 @@
 		display: flex;
 		gap: 0.5rem;
 	}
+	/* The one action on the form: full width and tall enough to read as the
+	   primary step after the selects, not a fifth field. */
 	button.primary {
-		padding: 0.55rem 1.1rem;
+		width: 100%;
+		min-height: 44px;
+		margin-top: 0.5rem;
+		padding: 0.7rem 1.1rem;
 		border-radius: 8px;
 		border: none;
 		cursor: pointer;
 		background: var(--amber);
 		color: var(--on-primary);
+		font-family: inherit;
+		font-size: 1rem;
 		font-weight: 600;
+	}
+	button.primary:hover:not(:disabled) {
+		background: var(--amber-deep);
+	}
+	button.primary:focus-visible,
+	select:focus-visible {
+		outline: 2px solid var(--amber);
+		outline-offset: 2px;
 	}
 	button.primary:disabled {
 		opacity: 0.6;
@@ -199,8 +214,6 @@
 			font-size: 16px; /* keeps iOS from zooming on focus */
 		}
 		button.primary {
-			width: 100%;
-			min-height: 44px;
 			font-size: 16px;
 		}
 	}

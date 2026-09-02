@@ -116,7 +116,14 @@
 	button:hover:not(:disabled) {
 		border-color: var(--amber);
 	}
+	/* Walnut text sits near 2:1 on the raised rail, so an empty chat read as
+	   broken; the theme-aware muted token holds AA in both sessions. */
 	.none {
-		color: var(--walnut);
+		color: var(--text-muted);
+	}
+	input:focus-visible,
+	button:focus-visible {
+		outline: 2px solid var(--amber);
+		outline-offset: 2px;
 	}
 </style>
