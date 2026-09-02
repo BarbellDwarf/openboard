@@ -17,6 +17,7 @@
 	} from '$lib/client/preferences';
 
 	import Pocket from './Pocket.svelte';
+	import HexBoard from './HexBoard.svelte';
 	import { dropUci, pocketCountsFor, roleName, splitDropDests, type PocketLetter } from './pockets';
 
 	interface Props {
@@ -323,28 +324,32 @@
 
 	<div class="ob-board-wrap theme-{boardTheme} pieces-{pieceSet}">
 		<div class="ob-board">
-			<div
-				class="cg-board-wrap"
-				bind:this={el}
-				tabindex="0"
-				role="application"
-				aria-label="Chess board. Use arrow keys to move the cursor and Enter to select squares."
-				onkeydown={onKeydown}
-			></div>
-			{#if cursor}
-				<div class="ob-cursor" style={cursorStyle(cursor)} aria-hidden="true"></div>
-			{/if}
+			{#if variant === 'chinese-checkers'}
+				<HexBoard {xfen} {dests} {orientation} {interactive} {anyColor} {onMove} />
+			{:else}
+				<div
+					class="cg-board-wrap"
+					bind:this={el}
+					tabindex="0"
+					role="application"
+					aria-label="Chess board. Use arrow keys to move the cursor and Enter to select squares."
+					onkeydown={onKeydown}
+				></div>
+				{#if cursor}
+					<div class="ob-cursor" style={cursorStyle(cursor)} aria-hidden="true"></div>
+				{/if}
 
-			{#if armedDrop}
-				{#each dropDests[armedDrop.letter] ?? [] as square (square)}
-					<button
-						type="button"
-						class="drop-target"
-						style={squarePosStyle(square)}
-						aria-label="Place {roleName(armedDrop.letter)} on {square}"
-						onclick={() => chooseDropTarget(square)}
-					></button>
-				{/each}
+				{#if armedDrop}
+					{#each dropDests[armedDrop.letter] ?? [] as square (square)}
+						<button
+							type="button"
+							class="drop-target"
+							style={squarePosStyle(square)}
+							aria-label="Place {roleName(armedDrop.letter)} on {square}"
+							onclick={() => chooseDropTarget(square)}
+						></button>
+					{/each}
+				{/if}
 			{/if}
 		</div>
 

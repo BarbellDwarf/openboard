@@ -12,6 +12,7 @@ import {
 	startPosition,
 	stateFromPosition
 } from './engine';
+import { fenToEngineState as ccFenToState } from './chinese-checkers';
 import { buildPgn } from './pgn';
 import type {
 	Color,
@@ -46,6 +47,9 @@ export async function createGame(input: CreateGameInput): Promise<string> {
 	const state = startFen
 		? stateFromPosition(loadPosition('chess960', startFen), 'chess960')
 		: startPosition(input.variant);
+	// chinese-checkers stores its start FEN in startFen (no chessops).
+	const ccStartFen =
+		input.variant === 'chinese-checkers' ? startPosition('chinese-checkers').xfen : startFen;
 	const [row] = await db
 		.insert(games)
 		.values({
@@ -56,7 +60,7 @@ export async function createGame(input: CreateGameInput): Promise<string> {
 			daysPerMove: input.timeControl.daysPerMove,
 			status: 'started',
 			currentXfen: state.xfen,
-			startFen,
+			startFen: ccStartFen,
 			whiteId: input.whiteId,
 			blackId: input.blackId,
 			botLevel: input.botLevel ?? null,
@@ -96,9 +100,14 @@ export async function loadGame(gameId: string): Promise<LoadedGame | null> {
 		.where(eq(movesTable.gameId, gameId))
 		.orderBy(asc(movesTable.ply));
 
-	let state: EngineState = game.startFen
-		? stateFromPosition(loadPosition(game.variant as VariantId, game.startFen), 'chess960')
-		: startPosition(game.variant as VariantId);
+	let state: EngineState;
+	if (game.variant === 'chinese-checkers') {
+		state = game.startFen ? ccFenToState(game.startFen) : startPosition('chinese-checkers');
+	} else {
+		state = game.startFen
+			? stateFromPosition(loadPosition(game.variant as VariantId, game.startFen), 'chess960')
+			: startPosition(game.variant as VariantId);
+	}
 	for (const row of rows) {
 		const applied = applyMove(state.variant, state.xfen, row.uci);
 		if (applied.ok) state = applied.state;
@@ -134,6 +143,7 @@ export interface MovePersistenceResult {
 		| 'illegal-move'
 		| 'invalid-move-format'
 		| 'invalid-position'
+		| 'promotion-piece-required'
 		| 'already-moved';
 	finished?: { result: ResultValue; termination: Termination } | null;
 	state?: EngineState;

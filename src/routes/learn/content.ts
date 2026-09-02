@@ -886,6 +886,99 @@ export const LEARN_VARIANT_PAGES: readonly VariantPage[] = [
 			'Keep a reserve on your back rows to guard against breakthroughs.',
 			'Sacrifice to force a multi-jump that leaves you with a positional advantage.'
 		]
+	},
+	{
+		id: 'chinese-checkers',
+		name: 'Chinese Checkers',
+		tagline: 'Star-shaped hex board: advance your pieces to the opposite camp.',
+		blurb: 'Star-shaped hex board: advance your pieces to the opposite camp.',
+		atAGlance: [
+			'121-cell star-shaped hexagonal board.',
+			'2 players: White and Black, each with 10 pieces.',
+			'White starts at the top camp, Black at the bottom camp.',
+			'Move one step to an adjacent cell or chain-hop over occupied cells.',
+			"Win by filling all 10 cells of the opponent's starting camp.",
+			'No captures. Untimed casual games only.'
+		],
+		goal: [
+			"Fill all 10 cells of the opponent's starting camp with your pieces. The engine detects this the instant all 10 target cells are occupied.",
+			'Resignation and flag fall decide games as usual.',
+			'No draws by repetition, insufficient material, or fifty-move rule.'
+		],
+		setup: [
+			'The board is a six-pointed star of 121 hexagonal cells.',
+			'White places 10 pieces in the top camp (rows 0-3).',
+			'Black places 10 pieces in the bottom camp (rows 8-12).',
+			'The centre of the board is empty at the start.',
+			'White moves first.'
+		],
+		pieceMovement: [
+			'Each piece can move one step to any adjacent empty cell.',
+			'Pieces can chain-hop over adjacent occupied cells (friend or foe) into the empty cell directly beyond.',
+			'Hop chains continue as long as valid hops are available from the landing cell.',
+			'No piece is ever captured or removed from the board.'
+		],
+		specialRules: [
+			'Hop chains: when jumping, the intermediate cell must be occupied and the landing cell must be empty. Hops can continue from the landing cell.',
+			'Chain-hops can change direction at each step. The chain is not required to follow a straight line.',
+			"Pieces are never captured. Both your own and opponent's pieces serve as hop targets.",
+			'No restrictions on moving into your own camp (unlike some rule sets, this implementation has no such restriction).'
+		],
+		opening: [
+			'The opening in Chinese Checkers is about establishing a path toward the opposite camp.',
+			'Advance pieces that are blocked by your own camp first. The pieces at the back of your camp take longest to move.',
+			'Use the centre of the board as a highway. The widest rows (7-9 cells) offer the most routing flexibility.',
+			'Early hops over enemy pieces can accelerate your advance, but also give the opponent hop opportunities.'
+		],
+		middlegame: [
+			'The middlegame is about coordinating your pieces toward the goal camp while navigating around the opponent.',
+			'Long hop chains can move a piece from your camp area to near the goal in a single turn. Look for these opportunities.',
+			'Blocking key cells can slow the opponent. Park a piece on a cell that is part of their likely hop path.',
+			'Do not cluster your pieces. Spread them out to maintain flexibility and avoid giving the opponent hop targets.'
+		],
+		endgame: [
+			'The endgame arrives when your first pieces approach the goal camp.',
+			'Fill the goal camp from the farthest cell inward. Pieces in the camp are safe and cannot be dislodged.',
+			'A single piece filling the wrong cell in the camp can block your other pieces. Plan the filling order.',
+			'The opponent may try to block cells in your goal camp. Hop over their blockers to land in empty camp cells.'
+		],
+		mistakes: [
+			'Clustering pieces together. This gives the opponent hop targets and limits your own routing options.',
+			'Ignoring the back pieces. The pieces at the rear of your camp take the most moves to reach the goal. Start them early.',
+			'Blocking your own path. A piece parked in front of your goal camp cells can prevent your other pieces from filling them.',
+			'Chasing the opponent instead of advancing. Every move that does not advance toward the goal is a wasted tempo.',
+			'Forgetting that hop chains can change direction. A chain does not need to be straight. Look for creative routes.',
+			'Leaving the goal camp open for the opponent to occupy. When possible, fill your own target cells to block the opponent.'
+		],
+		timeAdvice: [
+			'Bullet Chinese Checkers rewards quick spatial recognition. Scan for hop chains and advance decisively.',
+			'Blitz gives time to plan multi-hop routes. Use the extra time to find the longest chain available.',
+			'Rapid allows strategic planning of piece coordination. Map out which pieces will fill which camp cells.',
+			'Correspondence lets you study the board at length. The spatial complexity rewards careful route planning.'
+		],
+		quickReference: [
+			'121-cell hex star board.',
+			'10 pieces per player in opposite camps.',
+			'Step to adjacent empty cell.',
+			'Chain-hop over occupied cells.',
+			'No captures ever.',
+			"Win by filling the opponent's camp."
+		],
+		win: [
+			"Fill all 10 cells of the opponent's starting camp. The engine detects this the instant all cells are occupied.",
+			'Resignation and flag fall decide games as usual.'
+		],
+		rules: [
+			'Step one cell to an adjacent empty cell, or hop over an occupied cell to the empty cell beyond.',
+			'Hop chains continue while valid hops are available. Direction may change at each step.',
+			"Both your own and opponent's pieces serve as hop targets. No pieces are ever captured.",
+			'White starts at the top camp, Black at the bottom camp. White moves first.'
+		],
+		tips: [
+			'Advance your back-row pieces early. They take the most moves to reach the goal.',
+			'Use hop chains to cover ground quickly. A long chain can cross half the board.',
+			'Spread your pieces out. Clumped pieces give the opponent hop targets and block your own paths.'
+		]
 	}
 ];
 

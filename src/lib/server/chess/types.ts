@@ -9,7 +9,8 @@ export const VARIANTS = [
 	'atomic',
 	'horde',
 	'racingkings',
-	'checkers'
+	'checkers',
+	'chinese-checkers'
 ] as const;
 
 export type VariantId = (typeof VARIANTS)[number];
@@ -37,6 +38,7 @@ export type Termination =
 	| 'atomic-king-death'
 	| 'horde-wiped'
 	| 'racingkings-finish'
+	| 'chinese-checkers-finish'
 	| 'no-legal-move'
 	| 'admin-closed';
 
@@ -72,7 +74,11 @@ export type ApplyMoveResult =
 			uci: string;
 			finished: FinishedInfo | null;
 	  }
-	| { ok: false; error: 'illegal-move' | 'invalid-move-format' | 'invalid-position' };
+	| {
+			ok: false;
+			error:
+				'illegal-move' | 'invalid-move-format' | 'invalid-position' | 'promotion-piece-required';
+	  };
 
 export function speedClassFor(tc: TimeControl): SpeedClass {
 	if (tc.daysPerMove != null) return 'classical';
