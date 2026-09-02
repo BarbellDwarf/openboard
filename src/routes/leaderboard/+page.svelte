@@ -88,7 +88,7 @@
 	}
 	.filters a.active {
 		background: var(--amber);
-		color: #211b10;
+		color: var(--on-primary);
 		border-color: var(--amber);
 		font-weight: 600;
 	}

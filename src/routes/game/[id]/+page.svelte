@@ -321,37 +321,6 @@
 					<!-- Display-only affordance: the server re-checks the role. -->
 					<button type="button" onclick={() => gameChannel.adminClose(gameId)}>Close game</button>
 				{/if}
-				{#if over}
-					<div class="result" role="status">
-						<p class="verdict">
-							{over.result === 'draw'
-								? 'Draw'
-								: `${over.result === 'white' ? 'White' : 'Black'} wins`}
-						</p>
-						<p class="term">{terminationLabel(String(over.termination))}</p>
-						{#if rematchReadyTo}
-							<a href={resolve(`/game/${rematchReadyTo}`)} class="primary button-link"
-								>Go to rematch</a
-							>
-						{:else if !isSpectator && yourColor}
-							<button
-								type="button"
-								class="primary"
-								onclick={() => gameChannel.offerRematch(gameId, yourColor)}
-							>
-								Offer rematch
-							</button>
-							<button type="button" onclick={() => gameChannel.acceptRematch(gameId, yourColor)}>
-								Accept rematch
-							</button>
-						{/if}
-					</div>
-				{/if}
-				{#if info.status === 'finished'}
-					<!-- The endpoint re-checks this: players any time, spectators
-					     once the game is over. -->
-					<a class="button-link" href={resolve('/api/games/[id]/pgn', { id: gameId })}>PGN</a>
-				{/if}
 			</div>
 
 			<h2>Chat</h2>
@@ -359,6 +328,35 @@
 			<p class="sr-only" role="status" aria-live="polite">{announcement}</p>
 			{#if isSpectator && info.status === 'started'}
 				<p class="muted spectator-note">You are watching this game.</p>
+			{/if}
+
+			<!-- Post-game verdict and rematch sit in their own bordered card after
+			     the chat instead of wedging the moves panel open mid-flow. -->
+			{#if over}
+				<div class="result" role="status">
+					<p class="verdict">
+						{over.result === 'draw'
+							? 'Draw'
+							: `${over.result === 'white' ? 'White' : 'Black'} wins`}
+					</p>
+					<p class="term">{terminationLabel(String(over.termination))}</p>
+					{#if rematchReadyTo}
+						<a href={resolve(`/game/${rematchReadyTo}`)} class="primary button-link"
+							>Go to rematch</a
+						>
+					{:else if !isSpectator && yourColor}
+						<button
+							type="button"
+							class="primary"
+							onclick={() => gameChannel.offerRematch(gameId, yourColor)}
+						>
+							Offer rematch
+						</button>
+						<button type="button" onclick={() => gameChannel.acceptRematch(gameId, yourColor)}>
+							Accept rematch
+						</button>
+					{/if}
+				</div>
 			{/if}
 		</aside>
 	</main>
@@ -478,17 +476,21 @@
 	.button-link.primary {
 		background: var(--amber);
 		border-color: var(--amber);
-		color: #211b10;
+		color: var(--on-primary);
 		font-weight: 600;
 	}
 	button:hover,
 	.button-link:hover {
 		border-color: var(--amber);
 	}
+	/* Own bordered block, recessed against the raised rail so the verdict and
+	   rematch actions read as a separate card, not a panel interruption. */
 	.result {
 		width: 100%;
-		border-top: 1px solid var(--walnut);
-		padding-top: 0.75rem;
+		background: var(--baize);
+		border: 1px solid var(--walnut);
+		border-radius: 8px;
+		padding: 0.75rem;
 		display: flex;
 		flex-wrap: wrap;
 		gap: 0.5rem;

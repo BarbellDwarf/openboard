@@ -30,6 +30,34 @@
 	let saved = $state(false);
 	let saveFailed = $state(false);
 
+	// Day/night lives outside the server preferences payload: app.html applies
+	// it pre-paint from localStorage, and the header toggle shares this key.
+	const SCHEME_KEY = 'ob.color-scheme';
+	type ColorScheme = 'day' | 'night';
+	let daySession = $state(false);
+
+	function setDaySession(day: boolean): void {
+		if (day) document.documentElement.dataset.scheme = 'day';
+		else delete document.documentElement.dataset.scheme;
+		try {
+			localStorage.setItem(SCHEME_KEY, day ? 'day' : 'night');
+		} catch {
+			/* storage unavailable: theme lasts for this visit only */
+		}
+		window.dispatchEvent(
+			new CustomEvent<ColorScheme>('ob:scheme', { detail: day ? 'day' : 'night' })
+		);
+	}
+
+	$effect(() => {
+		daySession = document.documentElement.dataset.scheme === 'day';
+		function onScheme(event: Event): void {
+			daySession = (event as CustomEvent<ColorScheme>).detail === 'day';
+		}
+		window.addEventListener('ob:scheme', onScheme);
+		return () => window.removeEventListener('ob:scheme', onScheme);
+	});
+
 	async function loadPrefs(): Promise<void> {
 		const res = await fetch('/api/preferences');
 		if (!res.ok) return;
@@ -131,6 +159,18 @@
 						{p.name}
 					</button>
 				{/each}
+			</div>
+
+			<h2>Session colours</h2>
+			<div class="toggles">
+				<label>
+					<input
+						type="checkbox"
+						bind:checked={daySession}
+						onchange={(e) => setDaySession(e.currentTarget.checked)}
+					/>
+					Day session (light colours)
+				</label>
 			</div>
 
 			<h2>Sounds and motion</h2>
@@ -262,6 +302,10 @@
 		padding: 0.35rem 0.8rem;
 		border-radius: 999px;
 		font-weight: 600;
+	}
+	:global([data-scheme='day']) .saved {
+		/* Day lichen is darker for text contrast; flip the pill label to light. */
+		color: #f6f1e3;
 	}
 	.save-error {
 		color: var(--flag-red);

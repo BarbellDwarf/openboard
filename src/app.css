@@ -25,10 +25,30 @@
 	--sq-light: #ebd9b4;
 	--sq-dark: #96703f;
 
+	/* Derived surfaces and paired foregrounds (dark values are the shipped look) */
+	--veil: rgb(15 27 20 / 92%);
+	--on-primary: #211b10;
+	--on-flag: #ede4cf;
+
 	/* Type stacks wired to the @fontsource imports above */
 	--font-display: 'Marcellus', 'Georgia', 'Times New Roman', serif;
 	--font-body: 'Work Sans', system-ui, sans-serif;
 	--font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+/* Day session: daylight in the clubroom. Every pair below holds WCAG 2.2 AA
+   against the surfaces it lands on (ratios recorded in the PR description). */
+html[data-scheme='day'] {
+	--baize: #ece5d4;
+	--baize-raised: #f6f1e3;
+	--parchment: #26201a;
+	--amber: #8a5a14;
+	--amber-deep: #7c4e10;
+	--flag-red: #b13a26;
+	--lichen: #4a6b2a;
+	--veil: rgb(236 229 212 / 92%);
+	--on-primary: #f7f2e4;
+	--on-flag: #fdf8ee;
 }
 
 body {
@@ -38,6 +58,38 @@ body {
 	font-family: var(--font-body);
 	font-size: 1rem;
 	line-height: 1.5;
+}
+
+/* Token-based checkboxes: native controls ignore the palette entirely and
+   render browser blue. One shared rule covers Lobby "Rated", Appearance
+   toggles, and any checkbox added later. */
+input[type='checkbox'] {
+	appearance: none;
+	position: relative;
+	inline-size: 1rem;
+	block-size: 1rem;
+	flex: none;
+	margin: 0;
+	padding: 0;
+	border: 1px solid var(--walnut);
+	border-radius: 4px;
+	background: var(--baize);
+	cursor: pointer;
+}
+input[type='checkbox']:checked::after {
+	content: '';
+	position: absolute;
+	inset: 2px;
+	background: var(--amber);
+	clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+}
+input[type='checkbox']:focus-visible {
+	outline: 2px solid var(--amber);
+	outline-offset: 2px;
+}
+input[type='checkbox']:disabled {
+	cursor: default;
+	opacity: 0.6;
 }
 
 /* Chessboard themes and piece sets (global: targets chessground-created DOM) */
