@@ -299,6 +299,42 @@ export const challenges = pgTable(
 	]
 );
 
+export const passwordResetTokens = pgTable(
+	'password_reset_tokens',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		userId: uuid('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		/** SHA-256 of the opaque token an admin hands out. The raw value is never stored. */
+		tokenHash: text('token_hash').notNull(),
+		expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+		/** Set when the token is consumed; a claimed token can never be reused. */
+		usedAt: timestamp('used_at', { withTimezone: true }),
+		createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+	},
+	(t) => [
+		uniqueIndex('password_reset_tokens_hash_key').on(t.tokenHash),
+		index('password_reset_tokens_user_idx').on(t.userId)
+	]
+);
+
+export const correspondenceReminders = pgTable(
+	'correspondence_reminders',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		gameId: uuid('game_id')
+			.notNull()
+			.references(() => games.id, { onDelete: 'cascade' }),
+		userId: uuid('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		remindedAt: timestamp('reminded_at', { withTimezone: true }).defaultNow().notNull()
+	},
+	(t) => [uniqueIndex('correspondence_reminders_game_user_key').on(t.gameId, t.userId)]
+);
+
 export const usersRelations = relations(users, ({ many, one }) => ({
 	sessions: many(sessions),
 	oauthAccounts: many(oauthAccounts),

@@ -7,6 +7,7 @@ import { getRequestEvent } from '$app/server';
 
 import { db } from '$lib/server/db';
 import { oauthAccounts, sessions, users } from '$lib/server/db/schema';
+import { isMailConfigured, sendMail } from '$lib/server/mail';
 
 export interface OidcProviderConfig {
 	providerId: string;
@@ -42,6 +43,69 @@ function authSecret(): string {
 	return 'openboard-dev-secret-do-not-use-in-production';
 }
 
+/** Public origin of the app. Used to build links inside outgoing email. */
+function appOrigin(): string {
+	return process.env.ORIGIN ?? process.env.BETTER_AUTH_URL ?? '';
+}
+
+/**
+ * Email-dependent auth hooks exist only while SMTP is configured. Without
+ * SMTP the options stay undefined: better-auth refuses forget-password
+ * requests and no verification mail is queued, while sign-up and sign-in
+ * behave exactly as they do on a mailless server.
+ */
+const mailHooks = isMailConfigured()
+	? {
+			sendResetPassword: async ({ user, token }: { user: { email: string }; token: string }) => {
+				const url = `${appOrigin()}/reset-password?token=${encodeURIComponent(token)}`;
+				await sendMail({
+					to: user.email,
+					subject: 'Reset your OpenBoard password',
+					text: [
+						'Hello,',
+						'',
+						'Someone asked for a password reset for your OpenBoard account.',
+						'Open this link within one hour to choose a new password:',
+						'',
+						url,
+						'',
+						'If this was you, you can safely ignore this mail.'
+					].join('\n')
+				});
+			}
+		}
+	: {};
+
+const verificationHooks = isMailConfigured()
+	? {
+			// Soft verification: a mail goes out on sign-up, but nothing blocks
+			// sign-in while the address stays unverified.
+			sendOnSignUp: true,
+			sendVerificationEmail: async ({
+				user,
+				token
+			}: {
+				user: { email: string };
+				token: string;
+			}) => {
+				const url = `${appOrigin()}/verify-email?token=${encodeURIComponent(token)}`;
+				await sendMail({
+					to: user.email,
+					subject: 'Verify your OpenBoard email',
+					text: [
+						'Hello,',
+						'',
+						'Confirm your email address by opening this link:',
+						'',
+						url,
+						'',
+						'You can keep playing either way; this only proves the address is yours.'
+					].join('\n')
+				});
+			}
+		}
+	: undefined;
+
 export const auth = betterAuth({
 	secret: authSecret(),
 	baseURL: process.env.ORIGIN ?? process.env.BETTER_AUTH_URL,
@@ -60,8 +124,11 @@ export const auth = betterAuth({
 	},
 	emailAndPassword: {
 		enabled: true,
-		minPasswordLength: 10
+		minPasswordLength: 10,
+		resetPasswordTokenExpiresIn: 60 * 60,
+		...mailHooks
 	},
+	emailVerification: verificationHooks,
 	session: {
 		expiresIn: 60 * 60 * 24 * 30,
 		updateAge: 60 * 60 * 24
