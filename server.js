@@ -33,7 +33,10 @@ async function start() {
 
 	const httpServer = http.createServer(handler);
 	const io = new Server(httpServer, {
-		connectionStateRecovery: { maxDisconnectionDuration: 60_000 }
+		connectionStateRecovery: { maxDisconnectionDuration: 60_000 },
+		// 64KB: chat lines and move UCIs are tiny; the engine.io default (1MB)
+		// lets a single frame hammer the move handler with megabyte strings.
+		maxHttpBufferSize: 65536
 	});
 	injectSocketIO(io);
 

@@ -197,7 +197,11 @@ export function chineseCheckersApplyMove(
 
 		const isAdjacent = cellNeighbours[from].adjacent.includes(to);
 		if (isAdjacent) {
-			// Simple step.
+			// A simple step is legal only as a single-segment move: a Chinese
+			// checkers move is one step or a pure jump chain, never a mix.
+			// The client always sends one segment pair, so a longer UCI comes
+			// from a direct socket move and needs this check before applying.
+			if (segments.length > 2) return { ok: false, error: 'illegal-move' };
 		} else {
 			const jmpIdx = cellNeighbours[from].jumps.indexOf(to);
 			if (jmpIdx === -1) {
