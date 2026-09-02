@@ -17,31 +17,91 @@
 	</nav>
 
 	<h1>{page.name}</h1>
-	<p class="intro">{page.blurb}</p>
+	<p class="intro">{page.tagline}</p>
+
+	<section class="glance">
+		<h2>At a Glance</h2>
+		<ul>
+			{#each page.atAGlance as item (item)}
+				<li>{item}</li>
+			{/each}
+		</ul>
+	</section>
 
 	<section>
-		<h2>Winning and losing</h2>
+		<h2>Goal</h2>
 		<ul>
-			{#each page.win as line (line)}
+			{#each page.goal as line (line)}
 				<li>{line}</li>
 			{/each}
 		</ul>
 	</section>
 
 	<section>
-		<h2>How it plays here</h2>
+		<h2>Setup</h2>
 		<ul>
-			{#each page.rules as line (line)}
+			{#each page.setup as line (line)}
 				<li>{line}</li>
 			{/each}
 		</ul>
 	</section>
 
 	<section>
-		<h2>Tips</h2>
+		<h2>Piece Movement</h2>
 		<ul>
-			{#each page.tips as line (line)}
+			{#each page.pieceMovement as line (line)}
 				<li>{line}</li>
+			{/each}
+		</ul>
+	</section>
+
+	<section>
+		<h2>Special Rules</h2>
+		<ul>
+			{#each page.specialRules as line (line)}
+				<li>{line}</li>
+			{/each}
+		</ul>
+	</section>
+
+	<section>
+		<h2>Opening</h2>
+		<p>{page.opening.join(' ')}</p>
+	</section>
+
+	<section>
+		<h2>Middlegame</h2>
+		<p>{page.middlegame.join(' ')}</p>
+	</section>
+
+	<section>
+		<h2>Endgame</h2>
+		<p>{page.endgame.join(' ')}</p>
+	</section>
+
+	<section>
+		<h2>Common Mistakes</h2>
+		<ul>
+			{#each page.mistakes as mistake (mistake)}
+				<li>{mistake}</li>
+			{/each}
+		</ul>
+	</section>
+
+	<section>
+		<h2>Time Advice</h2>
+		<ul>
+			{#each page.timeAdvice as line (line)}
+				<li>{line}</li>
+			{/each}
+		</ul>
+	</section>
+
+	<section class="quick-ref">
+		<h2>Quick Reference</h2>
+		<ul>
+			{#each page.quickReference as item (item)}
+				<li>{item}</li>
 			{/each}
 		</ul>
 	</section>
@@ -106,6 +166,16 @@
 		color: var(--parchment);
 		font-size: 14px;
 		line-height: 1.55;
+	}
+	p {
+		color: var(--parchment);
+		font-size: 14px;
+		line-height: 1.55;
+		margin: 0;
+	}
+	.quick-ref {
+		background: var(--clubroom);
+		border-color: var(--clubroom);
 	}
 	.cta {
 		margin-top: 1.25rem;
