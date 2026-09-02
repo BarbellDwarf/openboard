@@ -43,12 +43,14 @@ export const sessions = pgTable(
 		userId: uuid('user_id')
 			.notNull()
 			.references(() => users.id, { onDelete: 'cascade' }),
+		token: text('token').notNull(),
 		expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
 		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+		updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 		ipAddress: text('ip_address'),
 		userAgent: text('user_agent')
 	},
-	(t) => [index('sessions_user_id_idx').on(t.userId)]
+	(t) => [index('sessions_user_id_idx').on(t.userId), uniqueIndex('sessions_token_key').on(t.token)]
 );
 
 export const oauthAccounts = pgTable(
@@ -58,11 +60,22 @@ export const oauthAccounts = pgTable(
 		userId: uuid('user_id')
 			.notNull()
 			.references(() => users.id, { onDelete: 'cascade' }),
-		provider: text('provider').notNull(),
-		providerAccountId: text('provider_account_id').notNull()
+		/** Provider-side account identifier. */
+		accountId: text('account_id').notNull(),
+		providerId: text('provider_id').notNull(),
+		issuer: text('issuer'),
+		accessToken: text('access_token'),
+		refreshToken: text('refresh_token'),
+		idToken: text('id_token'),
+		accessTokenExpiresAt: timestamp('access_token_expires_at', { withTimezone: true }),
+		refreshTokenExpiresAt: timestamp('refresh_token_expires_at', { withTimezone: true }),
+		scope: text('scope'),
+		password: text('password'),
+		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+		updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
 	},
 	(t) => [
-		uniqueIndex('oauth_provider_account_key').on(t.provider, t.providerAccountId),
+		uniqueIndex('oauth_provider_account_key').on(t.providerId, t.accountId),
 		index('oauth_user_id_idx').on(t.userId)
 	]
 );
