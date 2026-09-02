@@ -82,6 +82,16 @@ function clockView(room: RoomState, nowMs: number) {
 }
 
 /**
+ * Shape check for a client-supplied UCI string, run before any database
+ * work: it must be a non-empty string of sane length. The ceiling is far
+ * above any legal move (the longest real UCI here is a draughts chain of a
+ * few dozen characters) and keeps oversized payloads away from the engines.
+ */
+export function validMoveUci(uci: unknown): uci is string {
+	return typeof uci === 'string' && uci.length > 0 && uci.length <= 100;
+}
+
+/**
  * Outcome of a flag finalization attempt. completeGame's atomic claim decides
  * between the racers; 'lost' means another path already finished the game.
  */
@@ -332,6 +342,7 @@ export function injectSocketIO(io: IOServer): void {
 				{ gameId, uci }: { gameId: string; uci: string },
 				ack?: (response: unknown) => void
 			) => {
+				if (!validMoveUci(uci)) return ack?.({ ok: false, reason: 'bad-uci' });
 				if (!socket.data.userId) return ack?.({ ok: false, reason: 'unauthorized' });
 				if (rateLimited()) return ack?.({ ok: false, reason: 'rate-limited' });
 
@@ -362,6 +373,9 @@ export function injectSocketIO(io: IOServer): void {
 			'game:chat-send',
 			async ({ gameId, body }: { gameId: string; body: string }, ack?: (r: unknown) => void) => {
 				if (!socket.data.userId || !body?.trim()) return ack?.({ ok: false });
+				// Cap before trim, mirroring the HTTP chat path's 500-char limit:
+				// a multi-kilobyte body should never reach the message store.
+				if (typeof body !== 'string' || body.length > 500) return ack?.({ ok: false });
 				// Spectators are read-only: only seated players may post.
 				if (!(await playerColorFor(gameId, socket.data.userId))) {
 					return ack?.({ ok: false, reason: 'not-a-player' });

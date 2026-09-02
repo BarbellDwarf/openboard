@@ -25,7 +25,11 @@ import path from 'node:path';
 
 const BASE = process.env.BASE_URL ?? 'http://localhost:3100';
 const EMAIL = process.env.AUDIT_EMAIL ?? 'admin@example.com';
-const PASSWORD = process.env.AUDIT_PASSWORD ?? 'correct-horse-battery';
+const PASSWORD = process.env.AUDIT_PASSWORD;
+if (!PASSWORD) {
+	console.error('Set AUDIT_PASSWORD (test env admin password)');
+	process.exit(1);
+}
 const SHOTS = path.resolve('.review-screens');
 mkdirSync(SHOTS, { recursive: true });
 

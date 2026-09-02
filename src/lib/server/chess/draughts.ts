@@ -169,6 +169,9 @@ function captureChains(state: DraughtsState, origin: string): string[][] {
 			const destSq = toSquare(destF, destR);
 
 			if (visited.has(destSq)) continue;
+			// A jump must land on an empty square: applying a jump onto an
+			// occupied square would silently overwrite the occupant.
+			if (state.board.has(destSq)) continue;
 
 			const midPiece = state.board.get(midSq);
 			if (midPiece && midPiece.color !== piece!.color && !visited.has(midSq)) {
@@ -366,6 +369,45 @@ export function draughtsToEngineState(
 }
 
 /**
+ * Validate every hop of a multi-hop UCI against the capture rules, mirroring
+ * captureChains exactly: directions come from the piece as it stands on the
+ * origin square, each hop is a two-square diagonal jump over an enemy piece
+ * onto an empty square, and no square (origin, captured mid, landing) may be
+ * reused within the chain. The chain determines its own visited set, so a
+ * sequential walk over the hops is equivalent to extending frontier chains.
+ * A simple (non-capture) first hop must be the whole move.
+ */
+function validateChain(state: DraughtsState, squares: string[]): boolean {
+	const origin = squares[0];
+	const originPiece = state.board.get(origin);
+	if (!originPiece) return false;
+
+	// A non-capture move is always exactly two squares.
+	if (Math.abs(fileOf(squares[1]) - fileOf(origin)) <= 1) return squares.length === 2;
+
+	const dirs = moveDirections(originPiece);
+	const visited = new Set<string>([origin]);
+
+	for (let i = 1; i < squares.length; i++) {
+		const from = squares[i - 1];
+		const to = squares[i];
+		const df = fileOf(to) - fileOf(from);
+		const dr = rankOf(to) - rankOf(from);
+		if (df % 2 !== 0 || dr % 2 !== 0) return false;
+		const dir = dirs.find(([d, r]) => d === df / 2 && r === dr / 2);
+		if (!dir) return false;
+
+		const mid = toSquare(fileOf(from) + dir[0], rankOf(from) + dir[1]);
+		const midPiece = state.board.get(mid);
+		if (!midPiece || midPiece.color === originPiece.color) return false;
+		if (visited.has(mid) || visited.has(to) || state.board.has(to)) return false;
+		visited.add(mid);
+		visited.add(to);
+	}
+	return true;
+}
+
+/**
  * Apply a UCI move in the checkers engine and return the full
  * ApplyMoveResult shape the server expects.
  */
@@ -386,6 +428,12 @@ export function draughtsApplyMoveResult(
 	const squares = uci.match(/[a-h][1-8]/g);
 	if (!squares || squares.length < 2) return { ok: false, error: 'invalid-move-format' };
 
+	// Cap chain length, and reject any UCI whose matched squares do not span
+	// the whole raw string: a token such as "h9" cannot match the square
+	// pattern and would otherwise vanish silently.
+	if (squares.length > 64) return { ok: false, error: 'invalid-move-format' };
+	if (uci !== squares.join('')) return { ok: false, error: 'invalid-move-format' };
+
 	const originPiece = state.board.get(squares[0]);
 	if (!originPiece || originPiece.color !== state.turn) {
 		return { ok: false, error: 'illegal-move' };
@@ -397,6 +445,13 @@ export function draughtsApplyMoveResult(
 	const legalDests = draughtsDests(state);
 	const firstDests = legalDests[squares[0]];
 	if (!firstDests || !firstDests.includes(squares[1])) {
+		return { ok: false, error: 'illegal-move' };
+	}
+
+	// Hops two and beyond must extend a legal capture chain: the client plays
+	// one hop per UCI, so a longer UCI is always a direct socket move and must
+	// be checked here rather than trusted.
+	if (!validateChain(state, squares)) {
 		return { ok: false, error: 'illegal-move' };
 	}
 

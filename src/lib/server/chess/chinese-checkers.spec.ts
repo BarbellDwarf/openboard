@@ -245,6 +245,43 @@ describe('chinese-checkers applyMove', () => {
 		expect(newBoard[cellIndex(7, 5)]).toBe('W');
 	});
 
+	it('applies a pure multi-jump chain', () => {
+		// Verified against the neighbour table: h3 jumps i4 -> j5, and j5
+		// jumps k6 -> l7. Place black men on the two midpoints; W at h3 ends
+		// on l7 after two jumps in one UCI.
+		const board = new Array<string>(121).fill('.');
+		board[cellIndex(7, 3)] = 'W'; // h3
+		board[cellIndex(8, 4)] = 'B'; // i4
+		board[cellIndex(10, 6)] = 'B'; // k6
+		const fen = 'w' + board.join('');
+		const result = chineseCheckersApplyMove(fen, 'h3-j5-l7');
+		expect(result.ok).toBe(true);
+		if (!result.ok) return;
+		const newBoard = stateBoard(result.state.xfen);
+		expect(newBoard[cellIndex(7, 3)]).toBe('.');
+		expect(newBoard[cellIndex(8, 4)]).toBe('B');
+		expect(newBoard[cellIndex(10, 6)]).toBe('B');
+		expect(newBoard[cellIndex(11, 7)]).toBe('W'); // l7
+	});
+
+	it('rejects a step in the middle of a jump chain', () => {
+		// h3 jumps i4 -> j5; j5 sits adjacent to i5, so 'h3-j5-i5' would mix
+		// a jump with a trailing step and must be rejected whole.
+		const board = new Array<string>(121).fill('.');
+		board[cellIndex(7, 3)] = 'W'; // h3
+		board[cellIndex(8, 4)] = 'B'; // i4
+		const fen = 'w' + board.join('');
+		const result = chineseCheckersApplyMove(fen, 'h3-j5-i5');
+		expect(result.ok).toBe(false);
+	});
+
+	it('rejects a step-first chain', () => {
+		// d2-e2 is a legal single step; riding another segment onto it must fail.
+		const fen = chineseCheckersStartFen();
+		const result = chineseCheckersApplyMove(fen, 'd2-e2-f3');
+		expect(result.ok).toBe(false);
+	});
+
 	it('detects a win when all target camp cells are filled', () => {
 		const board = new Array<string>(121).fill('.');
 		const camp3 = campMembers[3];

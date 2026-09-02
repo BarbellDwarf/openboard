@@ -28,7 +28,7 @@ vi.mock('$lib/server/chat', () => ({
 	historyFor: vi.fn(async () => [])
 }));
 
-import { evictIdleRooms, injectSocketIO, sweepFlaggedRooms } from './index';
+import { evictIdleRooms, injectSocketIO, sweepFlaggedRooms, validMoveUci } from './index';
 
 type Handler = (...args: unknown[]) => unknown;
 
@@ -124,6 +124,53 @@ afterEach(async () => {
 	evictIdleRooms(Number.MAX_SAFE_INTEGER);
 	vi.clearAllMocks();
 	vi.useRealTimers();
+});
+
+describe('move payload guards', () => {
+	it('validMoveUci rejects non-strings, empty strings, and oversize strings', () => {
+		expect(validMoveUci('e2e4')).toBe(true);
+		expect(validMoveUci('c3e5g7')).toBe(true);
+		expect(validMoveUci('')).toBe(false);
+		expect(validMoveUci(undefined)).toBe(false);
+		expect(validMoveUci(null)).toBe(false);
+		expect(validMoveUci(42)).toBe(false);
+		expect(validMoveUci({ length: 5 })).toBe(false);
+		expect(validMoveUci('a'.repeat(101))).toBe(false);
+		expect(validMoveUci('a'.repeat(100))).toBe(true);
+	});
+
+	it('rejects a bad uci before loading the game', async () => {
+		gameService.playerColorFor.mockResolvedValue('white');
+		gameService.loadGame.mockResolvedValue(liveGame('uci-guard'));
+
+		const moved = await request(connect('user-w'), 'game:move', {
+			gameId: 'uci-guard',
+			uci: 'x'.repeat(4096)
+		});
+		expect(moved).toEqual({ ok: false, reason: 'bad-uci' });
+		// The guard fires first: no seat lookup, no game load, no persistence.
+		expect(gameService.playerColorFor).not.toHaveBeenCalled();
+		expect(gameService.loadGame).not.toHaveBeenCalled();
+		expect(gameService.persistMove).not.toHaveBeenCalled();
+	});
+
+	it('rejects an empty uci before loading the game', async () => {
+		gameService.loadGame.mockResolvedValue(liveGame('uci-empty'));
+
+		const moved = await request(connect('user-w'), 'game:move', { gameId: 'uci-empty', uci: '' });
+		expect(moved).toEqual({ ok: false, reason: 'bad-uci' });
+		expect(gameService.loadGame).not.toHaveBeenCalled();
+	});
+
+	it('rejects an oversize chat body before touching the message store', async () => {
+		gameService.playerColorFor.mockResolvedValue('white');
+
+		const sent = await request(connect('user-w'), 'game:chat-send', {
+			gameId: 'chat-guard',
+			body: 'a'.repeat(501)
+		});
+		expect(sent.ok).toBe(false);
+	});
 });
 
 describe('lazy flag finalization', () => {

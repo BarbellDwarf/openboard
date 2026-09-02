@@ -271,3 +271,75 @@ describe('draughts engine integration', () => {
 		}
 	});
 });
+
+/* ------------------------------------------------------------------ */
+/*  Multi-hop UCI validation                                           */
+/* ------------------------------------------------------------------ */
+
+describe('draughts multi-hop UCI validation', () => {
+	// Probe position from issue #112: white man on c3, black men on d4 and f6,
+	// e5 and g7 empty. c3xe5 then e5xg7 is the one legal full chain.
+	const CHAIN_FEN = '8/5p2/5p2/8/3p4/2P5/8/8 w - - 0 1';
+
+	it('accepts the legal full chain c3e5g7', () => {
+		const result = draughtsApplyMoveResult(CHAIN_FEN, 'c3e5g7');
+		expect(result.ok).toBe(true);
+		if (result.ok) {
+			expect(result.uci).toBe('c3e5g7');
+			expect(result.state.xfen.split(' ')[1]).toBe('b');
+		}
+	});
+
+	it('rejects c3e5h9: the off-board token must invalidate the whole move', () => {
+		// h9 cannot match the square regex, so the move would collapse to a
+		// plain capture unless the raw text is compared to the matched squares.
+		const result = draughtsApplyMoveResult(CHAIN_FEN, 'c3e5h9');
+		expect(result.ok).toBe(false);
+		if (!result.ok) expect(result.error).toBe('invalid-move-format');
+	});
+
+	it('rejects c3e5c7e3: one man may not move twice in a single ply', () => {
+		const fen = '8/2P5/8/8/3p4/2P5/8/8 w - - 0 1';
+		const result = draughtsApplyMoveResult(fen, 'c3e5c7e3');
+		expect(result.ok).toBe(false);
+	});
+
+	it('rejects a hop landing on an own piece', () => {
+		// White men on c3 and g7, black men on d4 and f6. e5xg7 would land on
+		// the second white man, so the chain is illegal past the first hop.
+		const fen = '8/5p2/5P2/8/3p4/2P5/8/8 w - - 0 1';
+		const result = draughtsApplyMoveResult(fen, 'c3e5g7');
+		expect(result.ok).toBe(false);
+	});
+
+	it('rejects a hop over an empty midpoint', () => {
+		// Black man only on d4: after c3xe5 the f6 midpoint is empty, so the
+		// second hop e5-g7 jumps nothing and must be rejected.
+		const fen = '8/8/8/8/3p4/2P5/8/8 w - - 0 1';
+		const result = draughtsApplyMoveResult(fen, 'c3e5g7');
+		expect(result.ok).toBe(false);
+	});
+
+	it('rejects a chain longer than 64 hops', () => {
+		const fen = '8/8/8/8/3p4/2P5/8/8 w - - 0 1';
+		// c3e5 is a legal capture; pad the UCI with repeated hops past 64.
+		const squares = ['c3', 'e5'];
+		for (let i = 0; i < 70; i++) squares.push(i % 2 === 0 ? 'g7' : 'e5');
+		const result = draughtsApplyMoveResult(fen, squares.join(''));
+		expect(result.ok).toBe(false);
+		if (!result.ok) expect(result.error).toBe('invalid-move-format');
+	});
+
+	it('rejects a UCI with separators between squares', () => {
+		// The join check treats any character outside the square tokens as
+		// garbage, so "c3-e5" fails the same raw-text comparison.
+		const result = draughtsApplyMoveResult(CHAIN_FEN, 'c3-e5');
+		expect(result.ok).toBe(false);
+		if (!result.ok) expect(result.error).toBe('invalid-move-format');
+	});
+
+	it('rejects a 3-square UCI after a simple move', () => {
+		const result = draughtsApplyMoveResult(CHAIN_FEN, 'a3b4c5');
+		expect(result.ok).toBe(false);
+	});
+});
