@@ -9,7 +9,8 @@ export const VARIANT_IDS: VariantId[] = [
 	'threecheck',
 	'atomic',
 	'horde',
-	'racingkings'
+	'racingkings',
+	'checkers'
 ];
 
 /** User-facing names for the variant selectors. */
@@ -21,5 +22,6 @@ export const VARIANT_LABELS: Record<VariantId, string> = {
 	threecheck: 'Three-check',
 	atomic: 'Atomic',
 	horde: 'Horde',
-	racingkings: 'Racing Kings'
+	racingkings: 'Racing Kings',
+	checkers: 'Checkers'
 };

@@ -22,6 +22,7 @@ export const TERMINATION_LABELS: Record<Termination, string> = {
 	'atomic-king-death': 'King exploded',
 	'horde-wiped': 'Horde destroyed',
 	'racingkings-finish': 'Race finished',
+	'no-legal-move': 'No legal moves',
 	'admin-closed': 'Closed by a moderator'
 };
 
@@ -41,6 +42,7 @@ export const TERMINATION_PHRASES: Record<Termination, string> = {
 	'atomic-king-death': 'king exploded',
 	'horde-wiped': 'horde wiped out',
 	'racingkings-finish': 'race finished',
+	'no-legal-move': 'no legal moves',
 	'admin-closed': 'closed by a moderator'
 };
 

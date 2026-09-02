@@ -792,6 +792,100 @@ export const LEARN_VARIANT_PAGES: readonly VariantPage[] = [
 			'Step your king aside early if its own army blocks the road. A buried king cannot sprint.',
 			'When the opponent is one move from rank eight, find the blocking square. A single piece parked there can save half a point.'
 		]
+	},
+	{
+		id: 'checkers',
+		name: 'Checkers',
+		tagline: 'American draughts: mandatory jumps, multi-jumps, and kings on the last rank.',
+		blurb: 'American draughts: mandatory jumps, multi-jumps, and kings on the last rank.',
+		atAGlance: [
+			'8x8 board with 12 pieces per side on dark squares.',
+			'Men move diagonally forward one square; captures are diagonal jumps.',
+			'Captures are mandatory. Multi-jump chains continue while available.',
+			'Kings crown on reaching the last rank and move one square diagonally in all directions.',
+			'Win when the opponent has no pieces or no legal moves.',
+			'No draws by repetition or fifty-move rule.'
+		],
+		goal: [
+			'Capture all opponent pieces or leave them with no legal move. The engine ends the game the instant either condition appears.',
+			'Resignation and flag fall decide games as usual.',
+			'There are no draws by repetition, insufficient material, or fifty-move rule in this variant.'
+		],
+		setup: [
+			'The board is 8x8 with pieces placed only on dark squares.',
+			'Each side starts with 12 men on the three rows closest to them.',
+			'White occupies the dark squares of ranks 1 through 3. Black occupies the dark squares of ranks 6 through 8.',
+			'White moves first.',
+			'The engine stores positions in standard FEN notation with P/p for men and K/k for kings.'
+		],
+		pieceMovement: [
+			'Men move diagonally forward one square to an empty dark square. White men move toward rank 8; black men move toward rank 1.',
+			'Kings move diagonally one square in any direction (forward or backward) to an empty dark square.',
+			'Captures are diagonal jumps over an adjacent enemy piece to the empty square immediately beyond it.',
+			'Men can only jump forward. Kings can jump in all four diagonal directions.'
+		],
+		specialRules: [
+			'Captures are mandatory. If a capture is available you must make it. You cannot choose a non-capture move when a capture exists.',
+			'Multi-jump chains: after a jump, if the same piece can jump again from its new position it must continue jumping. The chain ends when no further jumps are available.',
+			'No maximum-capture rule: the engine does not require you to take the longest chain. Any legal capture chain is accepted.',
+			'Kings crown automatically when a man reaches the opposite back rank. No player choice is involved.',
+			'The game ends when one side has no pieces remaining or no legal move available. The opponent wins.'
+		],
+		opening: [
+			'In checkers the opening revolves around controlling the centre four rows. Pieces posted on central dark squares dominate the board.',
+			'Advance your pieces in coordinated groups. Isolated pieces are easy targets for jumps.',
+			'Avoid pushing pieces to the edges. Edge pieces have fewer escape squares and are easier to trap.',
+			'Keep a reserve of pieces on your back rows to guard against early breakthroughs.'
+		],
+		middlegame: [
+			'The middlegame in checkers is a tactical battle of forced captures. Every capture sequence reshapes the board.',
+			'Sacrifice a piece to lure the opponent into a multi-jump that leaves you with a positional advantage.',
+			'Control the long diagonal. A piece anchored on a diagonal that spans the board limits the opponent options.',
+			'Watch for king-making opportunities. A piece that reaches the last rank becomes a powerful king that moves in all four diagonal directions.'
+		],
+		endgame: [
+			'King endgames dominate checkers. A king against a man is a strong advantage but not always a win.',
+			'Use your king to control both forward and backward diagonals. Kings are the decisive piece in the endgame.',
+			'When ahead in material, simplify by forcing trades. Fewer pieces make your material advantage more decisive.',
+			'A lone king against a lone king is a draw. Neither side can force a capture or blockade.'
+		],
+		mistakes: [
+			'Ignoring a forced capture. The engine enforces mandatory jumps. If you have a capture available you must take it.',
+			'Walking into a multi-jump trap. Before jumping, verify that the opponent cannot respond with a longer chain that leaves you worse.',
+			'Advancing all pieces to the centre without guarding the back rows. A breakthrough on the back rank creates dangerous king threats.',
+			'Pushing edge pieces. Edge pieces have fewer squares to escape to and are easily cornered.',
+			'Not planning for king-making. A piece one square from the last rank is a king waiting to happen. Protect your advancing pieces and block the opponent.',
+			'Treating every capture as equal. Some captures lead to strong multi-jumps; others leave you exposed. Choose captures that improve your position.'
+		],
+		timeAdvice: [
+			'Bullet checkers is fast and tactical. Focus on forced capture sequences and avoid walking into traps.',
+			'Blitz gives time to evaluate capture chains. Use the extra time to count the consequences of each jump.',
+			'Rapid allows deeper calculation of multi-jump sequences. Map out the full chain before committing.',
+			'Correspondence lets you study capture patterns at length. The tactical complexity rewards careful analysis.'
+		],
+		quickReference: [
+			'Men move diagonally forward one square.',
+			'Captures are mandatory jumps.',
+			'Multi-jump chains continue while available.',
+			'Kings move diagonally in all directions.',
+			'Win by capturing all pieces or blocking all moves.',
+			'No draws by repetition or fifty-move rule.'
+		],
+		win: [
+			'Capture all opponent pieces or leave them with no legal move. The engine ends the game the instant either condition appears.',
+			'Resignation and flag fall decide games as usual.'
+		],
+		rules: [
+			'Captures are mandatory. If a capture is available you must make it.',
+			'Multi-jump chains: after a jump, if the same piece can jump again it must continue.',
+			'Kings crown automatically on the last rank and move diagonally in all directions.',
+			'The game ends when one side has no pieces or no legal moves.'
+		],
+		tips: [
+			'Control the centre rows. Pieces on central dark squares dominate the board.',
+			'Keep a reserve on your back rows to guard against breakthroughs.',
+			'Sacrifice to force a multi-jump that leaves you with a positional advantage.'
+		]
 	}
 ];
 

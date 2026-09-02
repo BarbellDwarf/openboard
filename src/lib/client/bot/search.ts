@@ -2,6 +2,14 @@ import { parseFen } from 'chessops/fen';
 import { setupPosition } from 'chessops/variant';
 import type { Position } from 'chessops/chess';
 
+import {
+	draughtsFromFen,
+	draughtsDests,
+	draughtsApplyMove,
+	draughtsDetectFinish,
+	draughtsStartFen
+} from '$lib/server/chess/draughts';
+
 /** Material values plus light piece-square bias. */
 const VALUES = { pawn: 100, knight: 320, bishop: 330, rook: 500, queen: 900, king: 0 };
 
@@ -88,6 +96,9 @@ function sqName(sq: number): string {
 }
 
 export function chooseBotMove(variant: string, xfen: string, level: number): string | null {
+	// Checkers bot: shallow material+position eval with negamax.
+	if (variant === 'checkers') return chooseCheckersBotMove(xfen, level);
+
 	const rulesMap: Record<string, Parameters<typeof setupPosition>[0]> = {
 		standard: 'chess',
 		chess960: 'chess',
@@ -138,4 +149,98 @@ export function chooseBotMove(variant: string, xfen: string, level: number): str
 	const ties = candidates.filter((c) => bestScore - c.score <= 10);
 	const pick = ties[Math.floor(Math.random() * ties.length)];
 	return pick.uci;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Checkers bot                                                       */
+/* ------------------------------------------------------------------ */
+
+const CHECKERS_MAN_VALUE = 100;
+const CHECKERS_KING_VALUE = 300;
+
+/** Material + positional eval from the mover's perspective. */
+function evaluateCheckers(state: {
+	board: Map<string, { color: string; king: boolean }>;
+	turn: string;
+}): number {
+	let score = 0;
+	for (const [sq, piece] of state.board) {
+		const val = piece.king ? CHECKERS_KING_VALUE : CHECKERS_MAN_VALUE;
+		const sign = piece.color === 'white' ? 1 : -1;
+		score += sign * val;
+		// Advance bonus for men (kings already valuable).
+		if (!piece.king) {
+			const rank = Number(sq[1]) - 1;
+			const advance = piece.color === 'white' ? rank : 7 - rank;
+			score += sign * advance * 3;
+		}
+	}
+	return state.turn === 'white' ? score : -score;
+}
+
+const CHECKERS_MATE = 1_000_000;
+
+function checkersNegamax(
+	state: ReturnType<typeof draughtsFromFen>,
+	depth: number,
+	alpha: number,
+	beta: number
+): number {
+	const finish = draughtsDetectFinish(state);
+	if (finish) {
+		if (finish.result === state.turn) return CHECKERS_MATE - depth;
+		return -(CHECKERS_MATE - depth);
+	}
+	if (depth <= 0) return evaluateCheckers(state);
+
+	const dests = draughtsDests(state);
+	let best = -Infinity;
+	let any = false;
+
+	for (const [from, tos] of Object.entries(dests)) {
+		for (const to of tos) {
+			any = true;
+			const child = draughtsApplyMove(state, from + to);
+			const score = -checkersNegamax(child, depth - 1, -beta, -alpha);
+			if (score > best) best = score;
+			if (best > alpha) alpha = best;
+			if (alpha >= beta) return best;
+		}
+	}
+	return any ? best : 0;
+}
+
+function chooseCheckersBotMove(xfen: string, level: number): string | null {
+	let state;
+	try {
+		state = xfen ? draughtsFromFen(xfen) : draughtsFromFen(draughtsStartFen());
+	} catch {
+		return null;
+	}
+
+	const depth = [0, 1, 1, 2, 2, 3][level] ?? 2;
+	const blunderChance = [0.5, 0.25, 0.12, 0.05, 0][Math.min(level, 4)] ?? 0;
+
+	type Candidate = { uci: string; score: number };
+	const candidates: Candidate[] = [];
+	const dests = draughtsDests(state);
+
+	for (const [from, tos] of Object.entries(dests)) {
+		for (const to of tos) {
+			const uci = from + to;
+			const child = draughtsApplyMove(state, uci);
+			const score = -checkersNegamax(child, depth - 1, -Infinity, Infinity);
+			candidates.push({ uci, score });
+		}
+	}
+	if (candidates.length === 0) return null;
+
+	candidates.sort((a, b) => b.score - a.score);
+	if (Math.random() < blunderChance) {
+		const pool = candidates.slice(Math.min(3, candidates.length - 1));
+		return pool[Math.floor(Math.random() * pool.length)].uci;
+	}
+	const bestScore = candidates[0].score;
+	const ties = candidates.filter((c) => bestScore - c.score <= 10);
+	return ties[Math.floor(Math.random() * ties.length)].uci;
 }
