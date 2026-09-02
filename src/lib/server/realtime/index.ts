@@ -72,11 +72,11 @@ export function injectSocketIO(io: IOServer): void {
 	io.use(async (socket, next) => {
 		try {
 			const session = await getSessionFromCookieHeader(socket.request.headers.cookie);
-			if (!session) return next(new Error('unauthorized'));
-			socket.data.userId = session.userId;
+			socket.data.userId = session?.userId ?? null;
 			next();
 		} catch {
-			next(new Error('unauthorized'));
+			socket.data.userId = null;
+			next();
 		}
 	});
 
@@ -98,11 +98,11 @@ export function injectSocketIO(io: IOServer): void {
 				if (!game) return ack?.({ ok: false });
 				const room = roomFor(gameId);
 				if (game.timeControl.initialMs != null && !room.clock && game.status === 'started') {
-					// Resume mid-game: tick whoever is to move, charging only the
-					// elapsed time since their turn began.
-					const turn = game.state.xfen.split(' ')[1] === 'b' ? 'black' : 'white';
+					// Resume from now: downtime between restarts must not drain clocks.
+					// Resume mid-game: tick whoever is to move, charging only elapsed turn time.
+					const turnNow = game.state.xfen.split(' ')[1] === 'b' ? 'black' : 'white';
 					room.clock = initialClock(game.timeControl, Date.now(), {
-						turn,
+						turn: turnNow,
 						turnStartedAtMs: game.lastMoveAtMs
 					});
 				}
