@@ -5,6 +5,7 @@ import { and, eq, gt } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { challenges, games, gamePlayers, ratings, users } from '$lib/server/db/schema';
 import { createGame } from '$lib/server/chess/game-service';
+import { notifyUser } from '$lib/server/notifications';
 import type { Color, SpeedClass, VariantId } from '$lib/server/chess/types';
 
 /**
@@ -155,6 +156,12 @@ export async function acceptChallenge(
 	});
 
 	await db.update(challenges).set({ gameId }).where(eq(challenges.id, challengeId));
+	if (challenge.challengerId) {
+		void notifyUser(challenge.challengerId, 'challenge-accepted', {
+			body: 'Your challenge was accepted.',
+			url: `/game/${gameId}`
+		});
+	}
 	await db.insert(gamePlayers).values([
 		{ gameId, userId: whiteId, color: 'white' as Color },
 		{ gameId, userId: blackId, color: 'black' as Color }

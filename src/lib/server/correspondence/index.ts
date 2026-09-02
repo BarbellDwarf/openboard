@@ -4,6 +4,7 @@ import { eq, isNull, and } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { games } from '$lib/server/db/schema';
 import { completeGame } from '$lib/server/chess/game-service';
+import { notifyUser } from '$lib/server/notifications';
 
 /**
  * Correspondence flag sweeps. Deadlines are derived lazily everywhere else;
@@ -18,7 +19,9 @@ export async function sweepOnce(): Promise<number> {
 			id: games.id,
 			daysPerMove: games.daysPerMove,
 			lastMoveAt: games.lastMoveAt,
-			currentXfen: games.currentXfen
+			currentXfen: games.currentXfen,
+			whiteId: games.whiteId,
+			blackId: games.blackId
 		})
 		.from(games)
 		.where(and(eq(games.status, 'started'), isNull(games.result)));
@@ -39,7 +42,16 @@ export async function sweepOnce(): Promise<number> {
 			finalized++;
 		} catch (error) {
 			console.error('[correspondence] sweep finalize failed:', error);
+			continue;
 		}
+		void notifyUser(row.whiteId ?? '', 'game-result', {
+			body: `Correspondence game decided by flag: ${result} wins.`,
+			url: `/game/${row.id}`
+		});
+		void notifyUser(row.blackId ?? '', 'game-result', {
+			body: `Correspondence game decided by flag: ${result} wins.`,
+			url: `/game/${row.id}`
+		});
 	}
 	return finalized;
 }
