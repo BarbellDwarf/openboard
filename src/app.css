@@ -29,6 +29,8 @@
 	--veil: rgb(15 27 20 / 92%);
 	--on-primary: #211b10;
 	--on-flag: #ede4cf;
+	--nav-active: var(--amber);
+	--text-muted: rgb(237 228 207 / 72%);
 
 	/* Type stacks wired to the @fontsource imports above */
 	--font-display: 'Marcellus', 'Georgia', 'Times New Roman', serif;
@@ -49,6 +51,10 @@ html[data-scheme='day'] {
 	--veil: rgb(236 229 212 / 92%);
 	--on-primary: #f7f2e4;
 	--on-flag: #fdf8ee;
+	/* Amber text fails AA on the daylight surface; the active nav item uses
+	   this darker tone instead, and muted copy stays above the floor too. */
+	--nav-active: #e8a33d;
+	--text-muted: rgb(38 32 26 / 78%);
 }
 
 body {
@@ -66,8 +72,8 @@ body {
 input[type='checkbox'] {
 	appearance: none;
 	position: relative;
-	inline-size: 1rem;
-	block-size: 1rem;
+	inline-size: 24px;
+	block-size: 24px;
 	flex: none;
 	margin: 0;
 	padding: 0;

@@ -20,7 +20,8 @@
 		{ href: '/leaderboard', label: 'Leaderboards' },
 		{ href: '/games', label: 'My games' },
 		{ href: '/play-bot', label: 'Play a bot' },
-		{ href: '/learn', label: 'Learn' }
+		{ href: '/learn', label: 'Learn' },
+		{ href: '/settings/appearance', label: 'Settings' }
 	];
 
 	// Feed the caller's saved appearance into the shared client store so every
@@ -274,12 +275,12 @@
 		color: var(--parchment);
 		text-decoration: none;
 		font-size: 14px;
-		padding: 0.35rem 0.65rem;
+		padding: 0.45rem 0.65rem;
 		border-radius: 6px;
 	}
 	.main-nav a:hover,
 	.main-nav a[aria-current='page'] {
-		color: var(--amber);
+		color: var(--nav-active);
 		background: rgb(232 163 61 / 10%);
 	}
 	.right {
@@ -290,6 +291,9 @@
 	.who {
 		color: var(--lichen);
 		font-size: 13px;
+		display: inline-block;
+		padding: 0.35rem 0.3rem;
+		text-decoration: none;
 	}
 	.right a {
 		color: var(--parchment);

@@ -170,6 +170,23 @@
 		botThinking = !over && info?.status === 'started' && emptySeat !== null && turn === emptySeat;
 	}
 
+	async function playAgain(): Promise<void> {
+		const variant = info?.variant ?? 'standard';
+		const res = await fetch('/api/challenges', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				action: 'create-solo',
+				variant,
+				speedClass: 'blitz',
+				colorChoice: 'random',
+				level: urlLevel
+			})
+		});
+		const body = await res.json();
+		if (body.gameId) window.location.href = `/play-bot/${body.gameId}?level=${urlLevel}`;
+	}
+
 	onMount(() => {
 		void (async () => {
 			const socket = await getSocket();
@@ -191,8 +208,10 @@
 					result: String(payload.result ?? 'draw'),
 					termination: String(payload.termination ?? '')
 				};
+				clock = null;
 				botThinking = false;
 			};
+
 			socket.on('game:moved', onMoved);
 			socket.on('game:over', onOver);
 			unsub.push(() => socket.off('game:moved', onMoved));
@@ -267,15 +286,14 @@
 			<p class="move-error" role="alert">{moveError}</p>
 		{/if}
 		{#if timed}
-			<!-- Untimed bot games render no bar at all; timed ones seat the twin
-			     dials around the board exactly like the live game page. -->
+			<!-- Opponent bar above, your bar below — standard game layout. -->
 			<ClockBar
 				{clock}
 				{clockAt}
 				timed
 				turn={sideToMove}
-				whiteName={seatName('white')}
-				blackName={seatName('black')}
+				side={orientation === 'white' ? 'black' : 'white'}
+				name={seatName(orientation === 'white' ? 'black' : 'white')}
 				announceLow
 			/>
 		{/if}
@@ -297,8 +315,8 @@
 				{clockAt}
 				timed
 				turn={sideToMove}
-				whiteName={seatName('white')}
-				blackName={seatName('black')}
+				side={orientation}
+				name={seatName(orientation)}
 			/>
 		{/if}
 	</div>
@@ -315,7 +333,8 @@
 				Resign
 			</button>
 		{:else}
-			<a class="again" href="/play-bot">Play another bot game</a>
+			<button type="button" class="primary" onclick={() => void playAgain()}> Play again </button>
+			<a class="again" href="/play-bot">New settings</a>
 		{/if}
 		<h2>Chat</h2>
 		<ChatPanel {gameId} />
@@ -387,7 +406,7 @@
 		padding: 0.45rem 0.9rem;
 		border-radius: 8px;
 		background: var(--amber);
-		color: var(--ink);
+		color: var(--on-primary);
 		text-decoration: none;
 		font-size: 13px;
 		font-weight: 600;

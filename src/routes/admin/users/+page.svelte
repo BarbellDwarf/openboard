@@ -105,6 +105,10 @@
 		font-size: 13px;
 		margin: 0 0 1rem;
 	}
+	.table-scroll {
+		position: relative;
+		overflow-x: auto;
+	}
 	table {
 		width: 100%;
 		border-collapse: collapse;

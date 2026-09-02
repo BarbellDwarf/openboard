@@ -80,6 +80,11 @@
 	span {
 		font-size: 13px;
 	}
+	a.mono {
+		display: inline-block;
+		min-height: 24px;
+		line-height: 24px;
+	}
 	.muted {
 		color: color-mix(in srgb, var(--parchment) 65%, transparent);
 	}

@@ -15,12 +15,13 @@
 		clock: ClockView | null;
 		/** Wall-clock instant the snapshot was taken; anchors local draining. */
 		clockAt: number;
-		/** Whether the game carries a time control at all; hides both dials otherwise. */
+		/** Whether the game carries a time control at all; hides dials otherwise. */
 		timed?: boolean;
 		/** Side to move right now; its nameplate glows amber. */
 		turn: Side | null;
-		whiteName: string;
-		blackName: string;
+		/** Which seat this bar represents. */
+		side: Side;
+		name: string;
 		/** Seat whose flag has fallen, if known; forces its flag-red state. */
 		flagged?: Side | null;
 		/**
@@ -35,15 +36,19 @@
 		clockAt,
 		timed = true,
 		turn,
-		whiteName,
-		blackName,
+		side,
+		name,
 		flagged = null,
 		announceLow = false
 	}: Props = $props();
 
 	const showDials = $derived(!!clock && timed);
-	const blackLow = $derived(isFlaggedLow(clock?.blackMs ?? 99999999, flagged === 'black'));
-	const whiteLow = $derived(isFlaggedLow(clock?.whiteMs ?? 99999999, flagged === 'white'));
+	const low = $derived(
+		isFlaggedLow(
+			side === 'white' ? (clock?.whiteMs ?? 99999999) : (clock?.blackMs ?? 99999999),
+			flagged === side
+		)
+	);
 
 	// Local countdown between server broadcasts: a 500ms ticker recomputes the
 	// dial text from the last snapshot. The pages only store snapshots; this
@@ -70,68 +75,43 @@
 
 	onDestroy(stopTicker);
 
-	// Low-time announcement: fires once per side per view when the drained
-	// figure crosses under the ten-second threshold. The first pass only
-	// primes, so joining a position that already sits under ten seconds
-	// stays silent instead of replaying an old event.
+	const remainder = $derived(
+		showDials && clock ? drainedMs(clock, side, clockAt, nowMs) : Number.POSITIVE_INFINITY
+	);
+
+	// Low-time announcement: fires once when the drained figure crosses under
+	// the ten-second threshold.
 	let lowNotice = $state('');
-	const lowAnnounced = { white: false, black: false };
+	let lowAnnounced = false;
 	let lowPrimed = false;
 
-	const whiteRemainder = $derived(
-		showDials && clock ? drainedMs(clock, 'white', clockAt, nowMs) : Number.POSITIVE_INFINITY
-	);
-	const blackRemainder = $derived(
-		showDials && clock ? drainedMs(clock, 'black', clockAt, nowMs) : Number.POSITIVE_INFINITY
-	);
-
 	$effect(() => {
-		const white = whiteRemainder;
-		const black = blackRemainder;
-		if (!Number.isFinite(white) && !Number.isFinite(black)) return;
+		const rem = remainder;
+		if (!Number.isFinite(rem)) return;
 		if (!lowPrimed) {
 			lowPrimed = true;
-			lowAnnounced.white = white < LOW_TIME_MS;
-			lowAnnounced.black = black < LOW_TIME_MS;
+			lowAnnounced = rem < LOW_TIME_MS;
 			return;
 		}
-		const crossed: string[] = [];
-		if (!lowAnnounced.white && white < LOW_TIME_MS) {
-			lowAnnounced.white = true;
-			crossed.push('White clock under ten seconds.');
+		if (!lowAnnounced && rem < LOW_TIME_MS) {
+			lowAnnounced = true;
+			lowNotice = `${name} clock under ten seconds.`;
 		}
-		if (!lowAnnounced.black && black < LOW_TIME_MS) {
-			lowAnnounced.black = true;
-			crossed.push('Black clock under ten seconds.');
-		}
-		if (crossed.length > 0) lowNotice = crossed.join(' ');
 	});
+
+	const isActive = $derived(turn === side);
 </script>
 
-<!-- Black sits above the board, white below; the order matches every game view. -->
-<div class="nameplate" class:active={turn === 'black'}>
-	<span class="player">{blackName}</span>
+<div class="nameplate" class:active={isActive}>
+	<span class="player">{name}</span>
 	<span
 		class="dial mono"
-		class:low={showDials && blackLow}
-		class:ticking={clock?.ticking === 'black'}
+		class:low={showDials && low}
+		class:ticking={clock?.ticking === side}
 		style={showDials ? '' : 'display:none'}
-		aria-label="Black clock"
+		aria-label="{name} clock"
 	>
-		{clock ? formatClock(drainedMs(clock, 'black', clockAt, nowMs)) : '-'}
-	</span>
-</div>
-
-<div class="nameplate" class:active={turn === 'white'}>
-	<span class="player">{whiteName}</span>
-	<span
-		class="dial mono"
-		class:low={showDials && whiteLow}
-		class:ticking={clock?.ticking === 'white'}
-		style={showDials ? '' : 'display:none'}
-		aria-label="White clock"
-	>
-		{clock ? formatClock(drainedMs(clock, 'white', clockAt, nowMs)) : '-'}
+		{clock ? formatClock(drainedMs(clock, side, clockAt, nowMs)) : '-'}
 	</span>
 </div>
 

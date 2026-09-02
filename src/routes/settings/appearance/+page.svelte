@@ -179,6 +179,7 @@
 				<label>Volume <input type="range" min="0" max="100" bind:value={soundVolume} /></label>
 				<button
 					type="button"
+					class="test-sound"
 					onclick={() => new Audio(`/sounds/openboard/move.wav`).play().catch(() => {})}
 				>
 					Test sound
@@ -350,5 +351,11 @@
 		.saved {
 			top: 130px;
 		}
+	}
+	.test-sound {
+		min-height: 28px;
+	}
+	input[type='range'] {
+		min-height: 24px;
 	}
 </style>

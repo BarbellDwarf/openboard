@@ -100,7 +100,7 @@
 		outline-offset: 1px;
 	}
 	.hint {
-		color: var(--walnut);
+		color: var(--text-muted);
 		font-size: 12px;
 		margin-top: 0.25rem;
 	}
