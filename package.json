@@ -29,7 +29,6 @@
 		"chessops": "^0.15.1",
 		"croner": "^10.0.1",
 		"drizzle-orm": "^0.45.2",
-		"ffish-es6": "^0.7.9",
 		"pg": "^8.23.0",
 		"socket.io": "^4.8.3",
 		"socket.io-client": "^4.8.3",

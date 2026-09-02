@@ -27,7 +27,6 @@ function openboardSocket(): {
 					});
 					(gateway as { injectSocketIO: (io: unknown) => void }).injectSocketIO(io);
 					gateway.startBackgroundJobs?.();
-					gateway.startBackgroundJobs?.();
 				});
 			});
 		}
