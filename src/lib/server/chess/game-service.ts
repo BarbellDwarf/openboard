@@ -193,10 +193,19 @@ import { speedClassFor } from './types';
 export async function completeGame(
 	gameId: string,
 	result: ResultValue,
-	termination: Termination
+	termination: Termination,
+	opts?: { onlyIfLastMoveAt?: Date }
 ): Promise<void> {
 	const [game] = await db.select().from(games).where(eq(games.id, gameId)).limit(1);
 	if (!game || game.status !== 'started') return;
+	// Optimistic guard: bail when the game moved after the caller looked.
+	const guardMs = opts?.onlyIfLastMoveAt?.getTime();
+	if (
+		guardMs !== undefined &&
+		(game.lastMoveAt ? new Date(game.lastMoveAt).getTime() : null) !== guardMs
+	) {
+		return;
+	}
 	await finishGame(gameId, result, termination);
 	if (!game.rated) return;
 	await applyRatedResult({

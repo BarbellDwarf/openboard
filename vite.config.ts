@@ -17,11 +17,16 @@ function openboardSocket(): {
 			(globalThis as Record<string, unknown>).__obSocketWired = true;
 			httpServer.once('listening', () => {
 				void server.ssrLoadModule('/src/lib/server/realtime/index.ts').then((mod) => {
-					const gateway = mod as { injectSocketIO: (io: unknown) => void };
+					const gateway = mod as {
+						injectSocketIO: (io: unknown) => void;
+						startBackgroundJobs?: () => void;
+					};
 					const io = new IOServer(httpServer, {
 						connectionStateRecovery: { maxDisconnectionDuration: 60_000 }
 					});
-					gateway.injectSocketIO(io);
+					(gateway as { injectSocketIO: (io: unknown) => void }).injectSocketIO(io);
+					gateway.startBackgroundJobs?.();
+					gateway.startBackgroundJobs?.();
 				});
 			});
 		}

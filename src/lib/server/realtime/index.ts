@@ -17,6 +17,7 @@ import {
 	playerColorFor
 } from '../chess/game-service';
 import { getSessionFromCookieHeader } from '../auth/session';
+import { startSweeper } from '../correspondence';
 import { addMessage, historyFor } from '../chat';
 
 /**
@@ -24,6 +25,8 @@ import { addMessage, historyFor } from '../chat';
  * computed server-side and broadcast to the room. The handshake authenticates
  * against the same DB sessions the app uses.
  */
+
+let backgroundJobsStarted = false;
 
 interface RoomState {
 	clock?: LiveClock;
@@ -332,12 +335,11 @@ export function injectSocketIO(io: IOServer): void {
 	});
 }
 
-let backgroundJobsStarted = false;
-
 /** Called by both prod server and dev plugin after io is wired. */
 export function startBackgroundJobs(): void {
 	if (backgroundJobsStarted) return;
 	backgroundJobsStarted = true;
+	startSweeper();
 	const timer = setInterval(() => evictIdleRooms(), 5 * 60 * 1000);
 	timer.unref?.();
 }
