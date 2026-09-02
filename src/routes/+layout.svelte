@@ -1,23 +1,26 @@
 <script lang="ts">
+	import '../app.css';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 
 	let { data, children } = $props();
 
 	async function signOut() {
 		await fetch('/logout', { method: 'POST' });
+		// eslint-disable-next-line svelte/no-navigation-without-resolve
 		goto('/login');
 	}
 </script>
 
 <header>
-	<a class="brand" href="/">OpenBoard</a>
+	<a class="brand" href={resolve('/')}>OpenBoard</a>
 	<nav>
 		{#if data.user}
 			<span class="who">{data.user.name}</span>
 			<button type="button" onclick={signOut}>Sign out</button>
 		{:else}
-			<a href="/login">Sign in</a>
-			<a href="/register">Register</a>
+			<a href={resolve('/login')}>Sign in</a>
+			<a href={resolve('/register')}>Register</a>
 		{/if}
 	</nav>
 </header>

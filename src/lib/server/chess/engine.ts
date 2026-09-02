@@ -1,6 +1,6 @@
 import { chessgroundDests, lichessRules } from 'chessops/compat';
 import { normalizeMove } from 'chessops/chess';
-import { parseFen, makeFen } from 'chessops/fen';
+import { makeFen, parseFen } from 'chessops/fen';
 import { makeSanAndPlay } from 'chessops/san';
 import { defaultPosition, setupPosition } from 'chessops/variant';
 import { isDrop, makeSquare, parseUci } from 'chessops';
