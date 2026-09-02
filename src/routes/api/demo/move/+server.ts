@@ -34,16 +34,9 @@ export const POST: RequestHandler = async ({ request }) => {
 			dests: next.dests,
 			turn: next.turn,
 			inCheck: next.inCheck,
-			checkSquare: checkSquareOf(next.xfen),
 			san
 		});
 	} catch {
 		return json({ ok: false, reason: 'invalid-position' }, { status: 422 });
 	}
 };
-
-function checkSquareOf(_xfen: string): string | null {
-	// Cheap scan: chessground highlights checks itself via the check flag,
-	// so the demo passes true through the inCheck boolean instead.
-	return null;
-}
