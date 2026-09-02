@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -18,12 +19,16 @@
 
 	<nav class="filters" aria-label="Leaderboard filters">
 		{#each data.variants as v (v)}
-			<a class:active={v === data.variant} href={`?variant=${v}&speed=${data.speed}`}>{v}</a>
+			<a
+				class:active={v === data.variant}
+				href={`${resolve('/leaderboard')}?variant=${v}&speed=${data.speed}`}>{v}</a
+			>
 		{/each}
 		<span class="sep"></span>
 		{#each data.speeds as s (s)}
-			<a class:active={s === data.speed} href={`?variant=${data.variant}&speed=${s}`}
-				>{speedLabels[s]}</a
+			<a
+				class:active={s === data.speed}
+				href={`${resolve('/leaderboard')}?variant=${data.variant}&speed=${s}`}>{speedLabels[s]}</a
 			>
 		{/each}
 	</nav>
