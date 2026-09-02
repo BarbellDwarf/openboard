@@ -84,6 +84,9 @@ export default defineConfig({
 		})
 	],
 	test: {
-		passWithNoTests: true
+		passWithNoTests: true,
+		// Nested agent worktrees (.worktrees/*) carry their own src trees;
+		// their specs must never run as part of this suite.
+		exclude: ['**/node_modules/**', '**/.worktrees/**']
 	}
 });
