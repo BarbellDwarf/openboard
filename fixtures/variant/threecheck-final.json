@@ -1,0 +1,13 @@
+{
+	"name": "three-check: the final permitted check ends the game",
+	"variant": "threecheck",
+	"xfen": "7k/8/8/8/8/8/8/K1R5 w - - 1+3 0 1",
+	"uci": "c1c8",
+	"expect": {
+		"ok": true,
+		"finished": {
+			"result": "white",
+			"termination": "threecheck"
+		}
+	}
+}

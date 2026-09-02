@@ -1,8 +1,6 @@
 // Production entry point. Serves the adapter-node build and attaches Socket.IO.
 import http from 'node:http';
 import { Server } from 'socket.io';
-import { injectSocketIO } from './src/lib/server/realtime/index.js';
-import { pool } from './src/lib/server/config/db.js';
 
 const port = Number(process.env.PORT ?? 3000);
 const host = process.env.HOST ?? '0.0.0.0';
@@ -20,16 +18,26 @@ function validateProductionEnv() {
 async function start() {
 	validateProductionEnv();
 	let handler;
+	let injectSocketIO;
+	let startBackgroundJobs;
+	let closePool;
 	try {
 		({ handler } = await import('./build/handler.js'));
+		// The realtime bundle re-exports closePool from $lib/server/db, so
+		// SIGTERM drains the same pool the gateway queried.
+		({ injectSocketIO, startBackgroundJobs, closePool } = await import('./build/realtime.mjs'));
 	} catch {
 		console.error('No production build found in ./build. Run `npm run build` first.');
 		process.exit(1);
 	}
 
 	const httpServer = http.createServer(handler);
-	const io = new Server(httpServer);
+	const io = new Server(httpServer, {
+		connectionStateRecovery: { maxDisconnectionDuration: 60_000 }
+	});
 	injectSocketIO(io);
+
+	startBackgroundJobs();
 
 	httpServer.listen(port, host, () => {
 		console.log(`OpenBoard listening on port ${port}`);
@@ -39,7 +47,7 @@ async function start() {
 		io.close();
 		httpServer.close(async () => {
 			try {
-				await pool.end();
+				await closePool();
 			} finally {
 				process.exit(0);
 			}

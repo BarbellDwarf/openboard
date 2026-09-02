@@ -25,10 +25,36 @@
 	--sq-light: #ebd9b4;
 	--sq-dark: #96703f;
 
+	/* Derived surfaces and paired foregrounds (dark values are the shipped look) */
+	--veil: rgb(15 27 20 / 92%);
+	--on-primary: #211b10;
+	--on-flag: #ede4cf;
+	--nav-active: var(--amber);
+	--text-muted: rgb(237 228 207 / 72%);
+
 	/* Type stacks wired to the @fontsource imports above */
 	--font-display: 'Marcellus', 'Georgia', 'Times New Roman', serif;
 	--font-body: 'Work Sans', system-ui, sans-serif;
 	--font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+/* Day session: daylight in the clubroom. Every pair below holds WCAG 2.2 AA
+   against the surfaces it lands on (ratios recorded in the PR description). */
+html[data-scheme='day'] {
+	--baize: #ece5d4;
+	--baize-raised: #f6f1e3;
+	--parchment: #26201a;
+	--amber: #8a5a14;
+	--amber-deep: #7c4e10;
+	--flag-red: #b13a26;
+	--lichen: #4a6b2a;
+	--veil: rgb(236 229 212 / 92%);
+	--on-primary: #f7f2e4;
+	--on-flag: #fdf8ee;
+	/* Amber text fails AA on the daylight surface; the active nav item uses
+	   this darker tone instead, and muted copy stays above the floor too. */
+	--nav-active: #e8a33d;
+	--text-muted: rgb(38 32 26 / 78%);
 }
 
 body {
@@ -38,4 +64,376 @@ body {
 	font-family: var(--font-body);
 	font-size: 1rem;
 	line-height: 1.5;
+}
+
+/* Token-based checkboxes: native controls ignore the palette entirely and
+   render browser blue. One shared rule covers Lobby "Rated", Appearance
+   toggles, and any checkbox added later. */
+input[type='checkbox'] {
+	appearance: none;
+	position: relative;
+	inline-size: 24px;
+	block-size: 24px;
+	flex: none;
+	margin: 0;
+	padding: 0;
+	border: 1px solid var(--walnut);
+	border-radius: 4px;
+	background: var(--baize);
+	cursor: pointer;
+}
+input[type='checkbox']:checked::after {
+	content: '';
+	position: absolute;
+	inset: 2px;
+	background: var(--amber);
+	clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+}
+input[type='checkbox']:focus-visible {
+	outline: 2px solid var(--amber);
+	outline-offset: 2px;
+}
+input[type='checkbox']:disabled {
+	cursor: default;
+	opacity: 0.6;
+}
+
+/* Chessboard themes and piece sets (global: targets chessground-created DOM) */
+.ob-board-wrap.theme-vinyl cg-board {
+	background: conic-gradient(
+			var(--sq-light) 0 25%,
+			var(--sq-dark) 0 50%,
+			var(--sq-light) 0 75%,
+			var(--sq-dark) 0
+		)
+		0 0 / 25% 25%;
+}
+.ob-board-wrap.theme-slate cg-board {
+	background: conic-gradient(#cfd8dc 0 25%, #546e7a 0 50%, #cfd8dc 0 75%, #546e7a 0) 0 0 / 25% 25%;
+}
+.ob-board-wrap.theme-cherry cg-board {
+	background: conic-gradient(#f3d9c0 0 25%, #a34a32 0 50%, #f3d9c0 0 75%, #a34a32 0) 0 0 / 25% 25%;
+}
+.ob-board-wrap.theme-marble cg-board {
+	background: conic-gradient(#f5f5f5 0 25%, #7d8896 0 50%, #f5f5f5 0 75%, #7d8896 0) 0 0 / 25% 25%;
+}
+.ob-board-wrap.theme-contrast cg-board {
+	background: conic-gradient(#ffffff 0 25%, #212121 0 50%, #ffffff 0 75%, #212121 0) 0 0 / 25% 25%;
+}
+
+/* Forest: deep greens with a walnut frame. The class overrides the shared
+   square tokens, so coordinate labels and any square-derived styling follow
+   the palette without extra rules. */
+.ob-board-wrap.theme-forest {
+	--sq-light: #90b890;
+	--sq-dark: #2d4a2d;
+}
+.ob-board-wrap.theme-forest cg-board {
+	background: conic-gradient(
+			var(--sq-light) 0 25%,
+			var(--sq-dark) 0 50%,
+			var(--sq-light) 0 75%,
+			var(--sq-dark) 0
+		)
+		0 0 / 25% 25%;
+}
+.ob-board-wrap.theme-forest .ob-board {
+	border: 4px solid var(--walnut);
+}
+
+/* Ocean: navy and seafoam with a brushed silver frame. */
+.ob-board-wrap.theme-ocean {
+	--sq-light: #a0c4d8;
+	--sq-dark: #1a3a5a;
+}
+.ob-board-wrap.theme-ocean cg-board {
+	background: conic-gradient(
+			var(--sq-light) 0 25%,
+			var(--sq-dark) 0 50%,
+			var(--sq-light) 0 75%,
+			var(--sq-dark) 0
+		)
+		0 0 / 25% 25%;
+}
+.ob-board-wrap.theme-ocean .ob-board {
+	border: 4px solid #9fb4c4;
+}
+.pc-pw.pc-q {
+	background-image: url('/pieces/cburnett/wQ.svg');
+}
+.pc-pw.pc-r {
+	background-image: url('/pieces/cburnett/wR.svg');
+}
+.pc-pw.pc-b {
+	background-image: url('/pieces/cburnett/wB.svg');
+}
+.pc-pw.pc-n {
+	background-image: url('/pieces/cburnett/wN.svg');
+}
+.pc-pb.pc-q {
+	background-image: url('/pieces/cburnett/bQ.svg');
+}
+.pc-pb.pc-r {
+	background-image: url('/pieces/cburnett/bR.svg');
+}
+.pc-pb.pc-b {
+	background-image: url('/pieces/cburnett/bB.svg');
+}
+.pc-pb.pc-n {
+	background-image: url('/pieces/cburnett/bN.svg');
+}
+
+/* Piece sets: Arcane and Draconic.
+   Both sets are drawn entirely in CSS: each chessground piece element becomes
+   a themed medallion token with a unicode chess glyph centred on top. The
+   filled glyphs (♚♛♜♝♞♟) give every role a distinct silhouette for either
+   colour: crowned cross for king, orb crown for queen, castellated rook,
+   mitred bishop, horse profile for knight, dome for pawn. Colour contrast
+   between glyph and medallion stays above 3:1 on every shipped board theme,
+   in day and night sessions alike. */
+
+/* Shared token geometry. The doubled class out-ranks chessground's bundled
+   cburnett background rules regardless of stylesheet order. */
+.pieces-arcane.ob-board-wrap .cg-board-wrap piece,
+.pieces-draconic.ob-board-wrap .cg-board-wrap piece {
+	background-image: none;
+	border-radius: 22%;
+	box-sizing: border-box;
+}
+.pieces-arcane.ob-board-wrap .cg-board-wrap piece::before,
+.pieces-draconic.ob-board-wrap .cg-board-wrap piece::before {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	line-height: 1;
+	font-family: 'Segoe UI Symbol', 'Apple Symbols', 'Noto Sans Symbols 2', 'DejaVu Sans', sans-serif;
+	/* Fixed fallback first; cqw ties the glyph to the board once containers
+	   are supported, so a token scales with its square rather than the page
+	   font. */
+	font-size: 34px;
+	font-size: 10cqw;
+}
+
+/* Arcane, white court: moonstone tokens, violet rim, indigo glyph. */
+.pieces-arcane.ob-board-wrap .cg-board-wrap piece.white {
+	background:
+		radial-gradient(circle at 30% 24%, rgb(255 255 255 / 90%) 0 8%, transparent 42%),
+		linear-gradient(165deg, #f3eefb 0%, #ddd5ee 55%, #b9aed8 100%);
+	border: 1px solid #6a5aa8;
+	box-shadow:
+		inset 0 -3px 5px rgb(44 28 90 / 32%),
+		inset 0 2px 3px rgb(255 255 255 / 85%),
+		0 1px 3px rgb(12 6 34 / 45%);
+}
+.pieces-arcane.ob-board-wrap .cg-board-wrap piece.white::before {
+	color: #2c2350;
+	-webkit-text-stroke: 0.02em #c9bfe9;
+	text-shadow: 0 1px 1px rgb(255 255 255 / 60%);
+}
+
+/* Arcane, black court: deep indigo tokens, gold rim, amber glyph with a
+   faint gold aura. */
+.pieces-arcane.ob-board-wrap .cg-board-wrap piece.black {
+	background:
+		radial-gradient(circle at 30% 24%, rgb(140 110 220 / 50%) 0 10%, transparent 48%),
+		linear-gradient(165deg, #3b3374 0%, #251d54 55%, #141039 100%);
+	border: 1px solid #c9a24b;
+	box-shadow:
+		inset 0 -3px 5px rgb(0 0 0 / 55%),
+		inset 0 2px 3px rgb(190 170 255 / 28%),
+		0 1px 3px rgb(0 0 0 / 50%),
+		0 0 7px rgb(201 162 75 / 38%);
+}
+.pieces-arcane.ob-board-wrap .cg-board-wrap piece.black::before {
+	color: #eec368;
+	-webkit-text-stroke: 0.022em #191338;
+	text-shadow: 0 0 4px rgb(238 195 104 / 45%);
+}
+
+/* Draconic, white court: bone tokens with faint scale rings, crimson rim and
+   glyph. Scale stops are percentages so the texture shrinks with the token. */
+.pieces-draconic.ob-board-wrap .cg-board-wrap piece.white {
+	background:
+		repeating-radial-gradient(circle at 30% 26%, rgb(125 42 28 / 13%) 0 3%, transparent 3% 9%),
+		radial-gradient(circle at 30% 24%, rgb(255 250 238 / 90%) 0 8%, transparent 42%),
+		linear-gradient(165deg, #f5e7cd 0%, #e6d1ac 55%, #ccb28a 100%);
+	border: 1px solid #7d2a1c;
+	box-shadow:
+		inset 0 -3px 5px rgb(96 34 20 / 30%),
+		inset 0 2px 3px rgb(255 250 240 / 85%),
+		0 1px 3px rgb(40 10 6 / 45%);
+}
+.pieces-draconic.ob-board-wrap .cg-board-wrap piece.white::before {
+	color: #7d2214;
+	-webkit-text-stroke: 0.02em #eec9a2;
+	text-shadow: 0 1px 1px rgb(255 245 230 / 65%);
+}
+
+/* Draconic, black court: crimson scaled hide, ember rim, molten-gold glyph
+   with a low ember glow. */
+.pieces-draconic.ob-board-wrap .cg-board-wrap piece.black {
+	background:
+		repeating-radial-gradient(circle at 30% 26%, rgb(0 0 0 / 30%) 0 3%, transparent 3% 9%),
+		radial-gradient(circle at 30% 24%, rgb(255 150 80 / 35%) 0 10%, transparent 48%),
+		linear-gradient(165deg, #8e301c 0%, #65170e 55%, #360906 100%);
+	border: 1px solid #e09a4e;
+	box-shadow:
+		inset 0 -3px 5px rgb(0 0 0 / 55%),
+		inset 0 2px 3px rgb(255 170 100 / 30%),
+		0 1px 3px rgb(0 0 0 / 50%),
+		0 0 7px rgb(224 120 50 / 35%);
+}
+.pieces-draconic.ob-board-wrap .cg-board-wrap piece.black::before {
+	color: #ffd9a0;
+	-webkit-text-stroke: 0.022em #2b0703;
+	text-shadow: 0 0 4px rgb(255 170 90 / 45%);
+}
+
+/* Role glyphs: filled codepoints shared by both sets and both colours. */
+.pieces-arcane .cg-board-wrap piece.king::before,
+.pieces-draconic .cg-board-wrap piece.king::before {
+	content: '\265A';
+}
+.pieces-arcane .cg-board-wrap piece.queen::before,
+.pieces-draconic .cg-board-wrap piece.queen::before {
+	content: '\265B';
+}
+.pieces-arcane .cg-board-wrap piece.rook::before,
+.pieces-draconic .cg-board-wrap piece.rook::before {
+	content: '\265C';
+}
+.pieces-arcane .cg-board-wrap piece.bishop::before,
+.pieces-draconic .cg-board-wrap piece.bishop::before {
+	content: '\265D';
+}
+.pieces-arcane .cg-board-wrap piece.knight::before,
+.pieces-draconic .cg-board-wrap piece.knight::before {
+	content: '\265E';
+}
+.pieces-arcane .cg-board-wrap piece.pawn::before,
+.pieces-draconic .cg-board-wrap piece.pawn::before {
+	content: '\265F';
+}
+
+/* Small boards: strip glows and inset highlights, keep flat fills and rims,
+   and nudge the glyph up so a 40px token still reads cleanly. */
+@container ob-board (max-width: 340px) {
+	.pieces-arcane.ob-board-wrap .cg-board-wrap piece,
+	.pieces-draconic.ob-board-wrap .cg-board-wrap piece {
+		box-shadow: 0 1px 2px rgb(0 0 0 / 45%);
+	}
+	.pieces-arcane.ob-board-wrap .cg-board-wrap piece::before,
+	.pieces-draconic.ob-board-wrap .cg-board-wrap piece::before {
+		font-size: 36px;
+		font-size: 11cqw;
+		text-shadow: none;
+	}
+}
+
+/* Promotion icons per set */
+
+/* Promotion dialog icons follow the active piece set */
+.pieces-cburnett .pc-pw.pc-q {
+	background-image: url('/pieces/cburnett/wQ.svg');
+}
+.pieces-cburnett .pc-pw.pc-r {
+	background-image: url('/pieces/cburnett/wR.svg');
+}
+.pieces-cburnett .pc-pw.pc-b {
+	background-image: url('/pieces/cburnett/wB.svg');
+}
+.pieces-cburnett .pc-pw.pc-n {
+	background-image: url('/pieces/cburnett/wN.svg');
+}
+.pieces-cburnett .pc-pb.pc-q {
+	background-image: url('/pieces/cburnett/bQ.svg');
+}
+.pieces-cburnett .pc-pb.pc-r {
+	background-image: url('/pieces/cburnett/bR.svg');
+}
+.pieces-cburnett .pc-pb.pc-b {
+	background-image: url('/pieces/cburnett/bB.svg');
+}
+.pieces-cburnett .pc-pb.pc-n {
+	background-image: url('/pieces/cburnett/bN.svg');
+}
+/* Promotion dialog and pocket tray icons follow the active piece set and
+   reuse the board tokens, so the same art follows a piece from pocket to
+   square to promotion choice. */
+.pieces-arcane .pc,
+.pieces-draconic .pc {
+	position: relative;
+	background-image: none;
+	border-radius: 22%;
+	box-sizing: border-box;
+}
+.pieces-arcane .pc::before,
+.pieces-draconic .pc::before {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	line-height: 1;
+	font-family: 'Segoe UI Symbol', 'Apple Symbols', 'Noto Sans Symbols 2', 'DejaVu Sans', sans-serif;
+}
+.pieces-arcane .pc-pw,
+.pieces-draconic .pc-pw {
+	background:
+		radial-gradient(circle at 30% 24%, rgb(255 255 255 / 90%) 0 8%, transparent 42%),
+		linear-gradient(165deg, #f3eefb 0%, #ddd5ee 55%, #b9aed8 100%);
+	border: 1px solid #6a5aa8;
+}
+.pieces-arcane .pc-pw::before,
+.pieces-draconic .pc-pw::before {
+	color: #2c2350;
+	-webkit-text-stroke: 0.02em #c9bfe9;
+	text-shadow: 0 1px 1px rgb(255 255 255 / 60%);
+	font-size: 30px;
+	font-size: 8cqw;
+}
+.pieces-arcane .pc-pb,
+.pieces-draconic .pc-pb {
+	background:
+		radial-gradient(circle at 30% 24%, rgb(140 110 220 / 50%) 0 10%, transparent 48%),
+		linear-gradient(165deg, #3b3374 0%, #251d54 55%, #141039 100%);
+	border: 1px solid #c9a24b;
+}
+.pieces-arcane .pc-pb::before,
+.pieces-draconic .pc-pb::before {
+	color: #eec368;
+	-webkit-text-stroke: 0.022em #191338;
+	text-shadow: 0 0 4px rgb(238 195 104 / 45%);
+	font-size: 30px;
+	font-size: 8cqw;
+}
+/* Pocket tiles are fixed-size elements outside the board container, so their
+   glyphs take pixel sizes that mirror the tray's own breakpoints. */
+.pieces-arcane .tray .pc::before,
+.pieces-draconic .tray .pc::before {
+	font-size: 24px;
+}
+@media (max-width: 480px) {
+	.pieces-arcane .tray .pc::before,
+	.pieces-draconic .tray .pc::before {
+		font-size: 20px;
+	}
+}
+.pieces-arcane .pc-q::before,
+.pieces-draconic .pc-q::before {
+	content: '\265B';
+}
+.pieces-arcane .pc-r::before,
+.pieces-draconic .pc-r::before {
+	content: '\265C';
+}
+.pieces-arcane .pc-b::before,
+.pieces-draconic .pc-b::before {
+	content: '\265D';
+}
+.pieces-arcane .pc-n::before,
+.pieces-draconic .pc-n::before {
+	content: '\265E';
 }

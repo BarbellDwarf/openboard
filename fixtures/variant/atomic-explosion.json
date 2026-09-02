@@ -1,0 +1,12 @@
+{
+	"name": "atomic explosion removes capturer and captured pawn",
+	"variant": "atomic",
+	"xfen": "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3",
+	"uci": "f3e5",
+	"expect": {
+		"ok": true,
+		"absentSquares": ["e5"],
+		"presentSquares": ["e4"],
+		"sanPrefix": "Nxe5"
+	}
+}

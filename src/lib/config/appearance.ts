@@ -1,7 +1,7 @@
 /**
  * Appearance registries for board customization.
- * Later tickets extend these registries with additional themes, piece sets,
- * and sound packs backed by packaged assets.
+ * These are the only selectable ids; the preferences API validates against
+ * them so dead ids can never be persisted.
  */
 
 export interface BoardTheme {
@@ -20,10 +20,22 @@ export interface SoundPack {
 }
 
 /** Board colour schemes selectable per user. */
-export const BOARD_THEMES: readonly BoardTheme[] = [{ id: 'vinyl', name: 'Vinyl' }];
+export const BOARD_THEMES: readonly BoardTheme[] = [
+	{ id: 'vinyl', name: 'Vinyl' },
+	{ id: 'slate', name: 'Slate' },
+	{ id: 'cherry', name: 'Cherry' },
+	{ id: 'marble', name: 'Marble' },
+	{ id: 'contrast', name: 'High contrast' },
+	{ id: 'forest', name: 'Forest' },
+	{ id: 'ocean', name: 'Ocean' }
+];
 
 /** Piece artwork sets rendered on the board. */
-export const PIECE_SETS: readonly PieceSet[] = [{ id: 'cburnett', name: 'Classic' }];
+export const PIECE_SETS: readonly PieceSet[] = [
+	{ id: 'cburnett', name: 'Classic' },
+	{ id: 'arcane', name: 'Arcane (wizard)' },
+	{ id: 'draconic', name: 'Draconic (dragon)' }
+];
 
 /** Sound packs for move and game events. */
-export const SOUND_PACKS: readonly SoundPack[] = [{ id: 'kenney', name: 'Kenney' }];
+export const SOUND_PACKS: readonly SoundPack[] = [{ id: 'openboard', name: 'OpenBoard' }];
