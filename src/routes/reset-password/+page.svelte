@@ -137,4 +137,18 @@
 		outline: 2px solid var(--amber);
 		outline-offset: 2px;
 	}
+	@media (max-width: 480px) {
+		.auth-page {
+			margin-top: 4vh;
+			padding: 1.5rem 1.25rem;
+		}
+		input {
+			font-size: 16px; /* keeps iOS from zooming on focus */
+			padding: 0.7rem;
+		}
+		button {
+			font-size: 16px;
+			padding: 0.8rem;
+		}
+	}
 </style>

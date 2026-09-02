@@ -240,4 +240,36 @@
 		color: var(--lichen);
 		overflow-wrap: anywhere;
 	}
+	@media (max-width: 640px) {
+		.lobby {
+			margin-top: 1rem;
+		}
+		/* One field per row: selects and actions span the panel and nothing
+		   floats orphaned at the edge of the grid. */
+		.row {
+			display: grid;
+			grid-template-columns: 1fr;
+			gap: 0.6rem;
+		}
+		select {
+			width: 100%;
+			min-height: 44px;
+			font-size: 16px; /* keeps iOS from zooming on focus */
+		}
+		.check {
+			min-height: 44px;
+		}
+		.row button {
+			width: 100%;
+			min-height: 44px;
+			font-size: 15px;
+		}
+		.list li {
+			flex-wrap: wrap;
+			row-gap: 0.35rem;
+		}
+		.list button {
+			min-height: 44px;
+		}
+	}
 </style>

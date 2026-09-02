@@ -322,4 +322,33 @@
 			grid-template-columns: 1fr;
 		}
 	}
+	@media (max-width: 640px) {
+		.appearance {
+			margin-top: 1rem;
+		}
+		/* The preview board tracks the padded column width, matching the
+		   full-bleed boards on the game pages. */
+		.preview {
+			--board-size: calc(100vw - 2rem);
+		}
+		.grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+		}
+		.pick {
+			min-height: 64px;
+		}
+		.toggles label,
+		.toggles button {
+			min-height: 44px;
+		}
+		.toggles label {
+			display: flex;
+			align-items: center;
+		}
+		/* The header grows a second row on phones; keep the toast under it. */
+		.saved {
+			top: 130px;
+		}
+	}
 </style>

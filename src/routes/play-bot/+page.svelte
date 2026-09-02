@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 
 	const VARIANTS = [
 		'standard',
@@ -27,7 +28,17 @@
 
 	let { data } = $props();
 
-	let variant = $state<(typeof VARIANTS)[number]>('standard');
+	// Deep links like /play-bot?variant=crazyhouse (the Learn pages hand
+	// these out) preselect the ruleset instead of silently resetting to
+	// standard; unknown values fall back.
+	const requestedVariant = page.url.searchParams.get('variant');
+	const initialVariant: (typeof VARIANTS)[number] = (VARIANTS as readonly string[]).includes(
+		requestedVariant ?? ''
+	)
+		? (requestedVariant as (typeof VARIANTS)[number])
+		: 'standard';
+
+	let variant = $state<(typeof VARIANTS)[number]>(initialVariant);
 	let speed = $state<(typeof SPEEDS)[number]['id']>('blitz');
 	let colorChoice = $state<'white' | 'black' | 'random'>('random');
 	let level = $state<number>(2);
@@ -180,5 +191,20 @@
 		color: var(--flag-red);
 		margin: 0;
 		font-size: 0.85rem;
+	}
+	@media (max-width: 640px) {
+		.panel {
+			margin: 1.25rem 1rem;
+			padding: 1.25rem;
+		}
+		select {
+			min-height: 44px;
+			font-size: 16px; /* keeps iOS from zooming on focus */
+		}
+		button.primary {
+			width: 100%;
+			min-height: 44px;
+			font-size: 16px;
+		}
 	}
 </style>

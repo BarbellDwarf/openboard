@@ -89,6 +89,14 @@
 
 	const overText = $derived.by(() => {
 		if (!over) return '';
+		if (over.termination === 'timeout' && over.result !== 'draw') {
+			// The broadcast names the winner; the flagged seat is the other one.
+			const flagged = over.result === 'white' ? 'black' : 'white';
+			if (info?.yourColor) {
+				return info.yourColor === flagged ? 'You lost on time.' : 'You won on time.';
+			}
+			return `${flagged === 'white' ? 'White' : 'Black'} ran out of time.`;
+		}
 		const how = terminationPhrase(over.termination);
 		return over.result === 'draw'
 			? `Drawn by ${how}.`
@@ -268,6 +276,7 @@
 				turn={sideToMove}
 				whiteName={seatName('white')}
 				blackName={seatName('black')}
+				announceLow
 			/>
 		{/if}
 		<Board
@@ -386,6 +395,18 @@
 	@media (max-width: 800px) {
 		.bot-page {
 			grid-template-columns: 1fr;
+		}
+		/* Full-bleed square: the piece area tracks the padded column, so the
+		   coordinate labels never clip at the viewport edge. */
+		.board-column {
+			--board-size: min(calc(100vw - 2.5rem), 560px);
+		}
+		button.danger,
+		a.again {
+			display: inline-flex;
+			align-items: center;
+			min-height: 44px;
+			font-size: 14px;
 		}
 	}
 </style>

@@ -249,5 +249,27 @@
 		.features {
 			grid-template-columns: 1fr;
 		}
+		.hero {
+			gap: 1.5rem;
+			margin-top: 1.75rem;
+		}
+		.cta a {
+			padding: 0.8rem 1.3rem;
+		}
+		.cta {
+			flex-direction: column;
+		}
+		.cta a {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+		}
+		.setup-banner {
+			flex-wrap: wrap;
+			text-align: center;
+		}
+		.setup-banner button {
+			min-height: 44px;
+		}
 	}
 </style>

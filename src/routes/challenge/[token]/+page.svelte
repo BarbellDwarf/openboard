@@ -139,4 +139,18 @@
 		border: none;
 		cursor: pointer;
 	}
+	@media (max-width: 640px) {
+		.panel {
+			margin: 1.5rem 1rem;
+			padding: 1.25rem;
+		}
+		a.primary,
+		button.primary {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			min-height: 44px;
+			align-self: stretch;
+		}
+	}
 </style>

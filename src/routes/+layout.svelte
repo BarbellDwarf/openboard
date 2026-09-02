@@ -429,12 +429,52 @@
 	@media (max-width: 700px) {
 		header {
 			flex-wrap: wrap;
-			gap: 0.5rem;
+			gap: 0.4rem 0.75rem;
+			padding: 0.6rem 1rem;
 		}
+		/* Row one holds brand plus account; row two wraps the page links so
+		   nothing scrolls off-screen and the active pill always stays visible. */
 		.main-nav {
 			order: 3;
 			width: 100%;
-			overflow-x: auto;
+			flex-wrap: wrap;
+			gap: 0.25rem 0.5rem;
+		}
+		.main-nav a {
+			display: inline-flex;
+			align-items: center;
+			min-height: 44px;
+			padding: 0.5rem 0.8rem;
+			font-size: 15px;
+		}
+		.right a,
+		.right button {
+			display: inline-flex;
+			align-items: center;
+			min-height: 44px;
+		}
+		.right .bell,
+		.right .scheme {
+			width: 44px;
+			height: 44px;
+		}
+		.right .bell svg,
+		.right .scheme svg {
+			width: 20px;
+			height: 20px;
+		}
+		.bell-menu a,
+		.push-row button {
+			display: flex;
+			align-items: center;
+			min-height: 44px;
+		}
+	}
+	@media (max-width: 480px) {
+		/* The bell menu covers appearance settings, so the name can yield the
+		   space it needs on the narrowest phones. */
+		.who {
+			display: none;
 		}
 	}
 </style>

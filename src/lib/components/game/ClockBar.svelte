@@ -1,7 +1,14 @@
 <script lang="ts">
 	import { onDestroy } from 'svelte';
 
-	import { drainedMs, formatClock, isFlaggedLow, type ClockView, type Side } from './clockDisplay';
+	import {
+		drainedMs,
+		formatClock,
+		isFlaggedLow,
+		LOW_TIME_MS,
+		type ClockView,
+		type Side
+	} from './clockDisplay';
 
 	interface Props {
 		/** Latest server snapshot, or null while untimed or after release on finish. */
@@ -16,6 +23,11 @@
 		blackName: string;
 		/** Seat whose flag has fallen, if known; forces its flag-red state. */
 		flagged?: Side | null;
+		/**
+		 * Render the low-time live region. The bar mounts twice per board
+		 * (above and below), so exactly one instance per page should opt in.
+		 */
+		announceLow?: boolean;
 	}
 
 	let {
@@ -25,7 +37,8 @@
 		turn,
 		whiteName,
 		blackName,
-		flagged = null
+		flagged = null,
+		announceLow = false
 	}: Props = $props();
 
 	const showDials = $derived(!!clock && timed);
@@ -56,6 +69,43 @@
 	});
 
 	onDestroy(stopTicker);
+
+	// Low-time announcement: fires once per side per view when the drained
+	// figure crosses under the ten-second threshold. The first pass only
+	// primes, so joining a position that already sits under ten seconds
+	// stays silent instead of replaying an old event.
+	let lowNotice = $state('');
+	const lowAnnounced = { white: false, black: false };
+	let lowPrimed = false;
+
+	const whiteRemainder = $derived(
+		showDials && clock ? drainedMs(clock, 'white', clockAt, nowMs) : Number.POSITIVE_INFINITY
+	);
+	const blackRemainder = $derived(
+		showDials && clock ? drainedMs(clock, 'black', clockAt, nowMs) : Number.POSITIVE_INFINITY
+	);
+
+	$effect(() => {
+		const white = whiteRemainder;
+		const black = blackRemainder;
+		if (!Number.isFinite(white) && !Number.isFinite(black)) return;
+		if (!lowPrimed) {
+			lowPrimed = true;
+			lowAnnounced.white = white < LOW_TIME_MS;
+			lowAnnounced.black = black < LOW_TIME_MS;
+			return;
+		}
+		const crossed: string[] = [];
+		if (!lowAnnounced.white && white < LOW_TIME_MS) {
+			lowAnnounced.white = true;
+			crossed.push('White clock under ten seconds.');
+		}
+		if (!lowAnnounced.black && black < LOW_TIME_MS) {
+			lowAnnounced.black = true;
+			crossed.push('Black clock under ten seconds.');
+		}
+		if (crossed.length > 0) lowNotice = crossed.join(' ');
+	});
 </script>
 
 <!-- Black sits above the board, white below; the order matches every game view. -->
@@ -84,6 +134,10 @@
 		{clock ? formatClock(drainedMs(clock, 'white', clockAt, nowMs)) : '-'}
 	</span>
 </div>
+
+{#if announceLow}
+	<p class="sr-only" role="status" aria-live="polite">{lowNotice}</p>
+{/if}
 
 <style>
 	.nameplate {
@@ -127,5 +181,27 @@
 		.dial.low {
 			animation: none;
 		}
+	}
+	/* Slim strips on phones: the nameplates hug the board so the squares
+	   keep the space. */
+	@media (max-width: 640px) {
+		.nameplate {
+			padding: 0.25rem 0.55rem;
+			margin: 0.2rem 0;
+			font-size: 12px;
+			border-radius: 6px;
+		}
+		.dial {
+			font-size: 14px;
+			padding: 0.05rem 0.4rem;
+		}
+	}
+	.sr-only {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip: rect(0 0 0 0);
+		white-space: nowrap;
 	}
 </style>
