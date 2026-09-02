@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { authClient, oidcProviderId } from '$lib/client/auth';
+	import { authClient } from '$lib/client/auth';
 
 	import type { PageData } from './$types';
 
@@ -31,7 +31,7 @@
 	async function signInWithOidc() {
 		error = null;
 		await authClient.signIn.social({
-			provider: oidcProviderId,
+			provider: data.oidcName,
 			callbackURL: data.returnTo
 		});
 	}
