@@ -1,5 +1,5 @@
 {
-	"id": "1a2870dc-9d2b-44cf-9ff9-2135cdd737c2",
+	"id": "b5f921ca-14a4-4e72-ae6b-e855ca667d78",
 	"prevId": "00000000-0000-0000-0000-000000000000",
 	"version": "7",
 	"dialect": "postgresql",
@@ -937,7 +937,7 @@
 					"type": "text",
 					"primaryKey": false,
 					"notNull": true,
-					"default": "'kenney'"
+					"default": "'openboard'"
 				},
 				"sound_volume": {
 					"name": "sound_volume",

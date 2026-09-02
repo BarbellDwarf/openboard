@@ -86,3 +86,153 @@ body {
 .pc-pb.pc-n {
 	background-image: url('/pieces/cburnett/bN.svg');
 }
+
+/* Piece sets: Arcane and Draconic (original art) */
+.pieces-arcane .cg-board-wrap piece.pawn.white {
+	background-image: url('/pieces/arcane/wP.svg');
+}
+.pieces-arcane .cg-board-wrap piece.knight.white {
+	background-image: url('/pieces/arcane/wN.svg');
+}
+.pieces-arcane .cg-board-wrap piece.bishop.white {
+	background-image: url('/pieces/arcane/wB.svg');
+}
+.pieces-arcane .cg-board-wrap piece.rook.white {
+	background-image: url('/pieces/arcane/wR.svg');
+}
+.pieces-arcane .cg-board-wrap piece.queen.white {
+	background-image: url('/pieces/arcane/wQ.svg');
+}
+.pieces-arcane .cg-board-wrap piece.king.white {
+	background-image: url('/pieces/arcane/wK.svg');
+}
+.pieces-arcane .cg-board-wrap piece.pawn.black {
+	background-image: url('/pieces/arcane/bP.svg');
+}
+.pieces-arcane .cg-board-wrap piece.knight.black {
+	background-image: url('/pieces/arcane/bN.svg');
+}
+.pieces-arcane .cg-board-wrap piece.bishop.black {
+	background-image: url('/pieces/arcane/bB.svg');
+}
+.pieces-arcane .cg-board-wrap piece.rook.black {
+	background-image: url('/pieces/arcane/bR.svg');
+}
+.pieces-arcane .cg-board-wrap piece.queen.black {
+	background-image: url('/pieces/arcane/bQ.svg');
+}
+.pieces-arcane .cg-board-wrap piece.king.black {
+	background-image: url('/pieces/arcane/bK.svg');
+}
+.pieces-draconic .cg-board-wrap piece.pawn.white {
+	background-image: url('/pieces/draconic/wP.svg');
+}
+.pieces-draconic .cg-board-wrap piece.knight.white {
+	background-image: url('/pieces/draconic/wN.svg');
+}
+.pieces-draconic .cg-board-wrap piece.bishop.white {
+	background-image: url('/pieces/draconic/wB.svg');
+}
+.pieces-draconic .cg-board-wrap piece.rook.white {
+	background-image: url('/pieces/draconic/wR.svg');
+}
+.pieces-draconic .cg-board-wrap piece.queen.white {
+	background-image: url('/pieces/draconic/wQ.svg');
+}
+.pieces-draconic .cg-board-wrap piece.king.white {
+	background-image: url('/pieces/draconic/wK.svg');
+}
+.pieces-draconic .cg-board-wrap piece.pawn.black {
+	background-image: url('/pieces/draconic/bP.svg');
+}
+.pieces-draconic .cg-board-wrap piece.knight.black {
+	background-image: url('/pieces/draconic/bN.svg');
+}
+.pieces-draconic .cg-board-wrap piece.bishop.black {
+	background-image: url('/pieces/draconic/bB.svg');
+}
+.pieces-draconic .cg-board-wrap piece.rook.black {
+	background-image: url('/pieces/draconic/bR.svg');
+}
+.pieces-draconic .cg-board-wrap piece.queen.black {
+	background-image: url('/pieces/draconic/bQ.svg');
+}
+.pieces-draconic .cg-board-wrap piece.king.black {
+	background-image: url('/pieces/draconic/bK.svg');
+}
+
+/* Promotion icons per set */
+
+/* Promotion dialog icons follow the active piece set */
+.pieces-cburnett .pc-pw.pc-q {
+	background-image: url('/pieces/cburnett/wQ.svg');
+}
+.pieces-cburnett .pc-pw.pc-r {
+	background-image: url('/pieces/cburnett/wR.svg');
+}
+.pieces-cburnett .pc-pw.pc-b {
+	background-image: url('/pieces/cburnett/wB.svg');
+}
+.pieces-cburnett .pc-pw.pc-n {
+	background-image: url('/pieces/cburnett/wN.svg');
+}
+.pieces-cburnett .pc-pb.pc-q {
+	background-image: url('/pieces/cburnett/bQ.svg');
+}
+.pieces-cburnett .pc-pb.pc-r {
+	background-image: url('/pieces/cburnett/bR.svg');
+}
+.pieces-cburnett .pc-pb.pc-b {
+	background-image: url('/pieces/cburnett/bB.svg');
+}
+.pieces-cburnett .pc-pb.pc-n {
+	background-image: url('/pieces/cburnett/bN.svg');
+}
+.pieces-arcane .pc-pw.pc-q {
+	background-image: url('/pieces/arcane/wQ.svg');
+}
+.pieces-arcane .pc-pw.pc-r {
+	background-image: url('/pieces/arcane/wR.svg');
+}
+.pieces-arcane .pc-pw.pc-b {
+	background-image: url('/pieces/arcane/wB.svg');
+}
+.pieces-arcane .pc-pw.pc-n {
+	background-image: url('/pieces/arcane/wN.svg');
+}
+.pieces-arcane .pc-pb.pc-q {
+	background-image: url('/pieces/arcane/bQ.svg');
+}
+.pieces-arcane .pc-pb.pc-r {
+	background-image: url('/pieces/arcane/bR.svg');
+}
+.pieces-arcane .pc-pb.pc-b {
+	background-image: url('/pieces/arcane/bB.svg');
+}
+.pieces-arcane .pc-pb.pc-n {
+	background-image: url('/pieces/arcane/bN.svg');
+}
+.pieces-draconic .pc-pw.pc-q {
+	background-image: url('/pieces/draconic/wQ.svg');
+}
+.pieces-draconic .pc-pw.pc-r {
+	background-image: url('/pieces/draconic/wR.svg');
+}
+.pieces-draconic .pc-pw.pc-b {
+	background-image: url('/pieces/draconic/wB.svg');
+}
+.pieces-draconic .pc-pw.pc-n {
+	background-image: url('/pieces/draconic/wN.svg');
+}
+.pieces-draconic .pc-pb.pc-q {
+	background-image: url('/pieces/draconic/bQ.svg');
+}
+.pieces-draconic .pc-pb.pc-r {
+	background-image: url('/pieces/draconic/bR.svg');
+}
+.pieces-draconic .pc-pb.pc-b {
+	background-image: url('/pieces/draconic/bB.svg');
+}
+.pieces-draconic .pc-pb.pc-n {
+	background-image: url('/pieces/draconic/bN.svg');
+}
