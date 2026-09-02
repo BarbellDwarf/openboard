@@ -43,8 +43,7 @@ export default defineConfig({
 			srcDir: 'src/service-worker',
 			filename: 'sw.ts',
 			registerType: 'prompt',
-			injectRegister: null,
-			manifest: false
+			injectRegister: null
 		})
 	],
 	test: {
