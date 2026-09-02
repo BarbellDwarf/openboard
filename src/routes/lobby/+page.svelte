@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { invalidateAll } from '$app/navigation';
 
 	import type { PageData } from './$types';
@@ -36,14 +37,14 @@
 		busy = true;
 		const r = await post({ action: 'accept', challengeId: id });
 		busy = false;
-		if (r.gameId) window.location.href = `/game/${r.gameId}`;
+		if (r.gameId) window.location.href = resolve(`/game/${r.gameId}`);
 	}
 
 	async function quickPair(): Promise<void> {
 		pairing = true;
 		const r = await post({ action: 'quickpair' });
 		pairing = false;
-		if (r.gameId) window.location.href = `/game/${r.gameId}`;
+		if (r.gameId) window.location.href = resolve(`/game/${r.gameId}`);
 	}
 </script>
 
