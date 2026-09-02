@@ -160,18 +160,6 @@ export async function persistMove(gameId: string, uci: string): Promise<MovePers
 					})
 				})
 				.where(eq(games.id, gameId));
-
-			if (finished) {
-				await tx
-					.update(games)
-					.set({
-						status: 'finished',
-						result: finished.result,
-						termination: finished.termination,
-						finishedAt: new Date()
-					})
-					.where(eq(games.id, gameId));
-			}
 		});
 	} catch (error) {
 		// Unique violation on (game_id, ply): a concurrent identical move won.
@@ -185,7 +173,44 @@ export async function persistMove(gameId: string, uci: string): Promise<MovePers
 		throw error;
 	}
 
+	// On-board finishes (mate, stalemate, variant wins, repetition, fifty-move)
+	// finalize through completeGame so rated games get Glicko updates too.
+	if (finished) {
+		try {
+			await completeGame(gameId, finished.result, finished.termination);
+		} catch (error) {
+			console.error('[game] post-move finalize failed:', error);
+		}
+	}
+
 	return { applied: true, finished, state: outcome.state, san: outcome.san };
+}
+
+import { applyRatedResult } from '$lib/server/ratings/service';
+import { speedClassFor } from './types';
+
+/** Finish a game and, when rated, apply Glicko-2 updates. */
+export async function completeGame(
+	gameId: string,
+	result: ResultValue,
+	termination: Termination
+): Promise<void> {
+	const [game] = await db.select().from(games).where(eq(games.id, gameId)).limit(1);
+	if (!game || game.status !== 'started') return;
+	await finishGame(gameId, result, termination);
+	if (!game.rated) return;
+	await applyRatedResult({
+		gameId,
+		variant: game.variant as VariantId,
+		speed: speedClassFor({
+			initialMs: game.initialMs,
+			incrementMs: game.incrementMs,
+			daysPerMove: game.daysPerMove
+		}),
+		result,
+		whiteId: game.whiteId,
+		blackId: game.blackId
+	});
 }
 
 export async function finishGame(

@@ -11,7 +11,7 @@ import {
 } from '../chess/clocks';
 import {
 	createGame,
-	finishGame,
+	completeGame,
 	loadGame,
 	persistMove,
 	playerColorFor
@@ -98,10 +98,11 @@ export function injectSocketIO(io: IOServer): void {
 				if (!game) return ack?.({ ok: false });
 				const room = roomFor(gameId);
 				if (game.timeControl.initialMs != null && !room.clock && game.status === 'started') {
-					// Resume mid-game: tick whoever is to move, charging only elapsed turn time.
-					const turnNow = game.state.xfen.split(' ')[1] === 'b' ? 'black' : 'white';
+					// Resume mid-game: tick whoever is to move, charging only the
+					// elapsed time since their turn began.
+					const turn = game.state.xfen.split(' ')[1] === 'b' ? 'black' : 'white';
 					room.clock = initialClock(game.timeControl, Date.now(), {
-						turn: turnNow,
+						turn,
 						turnStartedAtMs: game.lastMoveAtMs
 					});
 				}
@@ -156,7 +157,7 @@ export function injectSocketIO(io: IOServer): void {
 					const flagged = flaggedColor(room.clock, nowMs);
 					if (flagged) {
 						try {
-							await finishGame(gameId, flagged === 'white' ? 'black' : 'white', 'timeout');
+							await completeGame(gameId, flagged === 'white' ? 'black' : 'white', 'timeout');
 						} catch (error) {
 							console.error('[realtime] flag finalize failed:', error);
 							return ack?.({ ok: false, reason: 'internal-error' });
@@ -209,7 +210,12 @@ export function injectSocketIO(io: IOServer): void {
 			if (!color) return;
 			const game = await loadGame(gameId);
 			if (!game || game.status !== 'started') return;
-			await finishGame(gameId, color === 'white' ? 'black' : 'white', 'resignation');
+			try {
+				await completeGame(gameId, color === 'white' ? 'black' : 'white', 'resignation');
+			} catch (error) {
+				console.error('[realtime] resignation finalize failed:', error);
+				return;
+			}
 			io.to(`game:${gameId}`).emit('game:over', {
 				result: color === 'white' ? 'black' : 'white',
 				termination: 'resignation'
@@ -235,7 +241,7 @@ export function injectSocketIO(io: IOServer): void {
 			if (!game || game.status !== 'started') return;
 			room.drawOfferedBy = undefined;
 			try {
-				await finishGame(gameId, 'draw', 'agreement');
+				await completeGame(gameId, 'draw', 'agreement');
 			} catch (error) {
 				console.error('[realtime] draw finalize failed:', error);
 				return;
