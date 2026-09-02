@@ -4,7 +4,9 @@
 
 	import Board from '$lib/components/board/Board.svelte';
 	import ChatPanel from '$lib/components/chat/ChatPanel.svelte';
+	import ClockBar from '$lib/components/game/ClockBar.svelte';
 	import { isDropUci } from '$lib/components/board/pockets';
+	import type { ClockView, Side } from '$lib/components/game/clockDisplay';
 	import { gameChannel, getSocket } from '$lib/client/socket';
 	import { terminationPhrase } from '$lib/client/terminations';
 	import type { DestMap } from '$lib/server/chess/types';
@@ -19,6 +21,11 @@
 			whiteId?: string | null;
 			blackId?: string | null;
 			yourColor?: 'white' | 'black' | null;
+			timeControl?: {
+				initialMs: number | null;
+				incrementMs: number | null;
+				daysPerMove: number | null;
+			};
 		} | null;
 		state?: { xfen?: unknown; dests?: DestMap } | null;
 		sanMoves?: string[];
@@ -36,6 +43,11 @@
 		whiteId?: string | null;
 		blackId?: string | null;
 		yourColor?: 'white' | 'black' | null;
+		timeControl?: {
+			initialMs: number | null;
+			incrementMs: number | null;
+			daysPerMove: number | null;
+		};
 	} | null>(null);
 	let xfen = $state('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
 	let dests = $state<DestMap>({});
@@ -47,10 +59,33 @@
 	let botThinking = $state(false);
 	let over = $state<{ result: string; termination: string } | null>(null);
 	let orientation = $state<'white' | 'black'>('white');
+	/** Latest server clock snapshot; null while untimed or after release on finish. */
+	let clock = $state<ClockView | null>(null);
+	/** When `clock` was received; the ticking side drains from this moment. */
+	let clockAt = $state(Date.now());
 	/** Transient, non-blocking notice when a move fails or times out. */
 	let moveError = $state<string | null>(null);
 	let unsub: Array<() => void> = [];
 	let moveErrorTimer: ReturnType<typeof setTimeout> | null = null;
+
+	const timed = $derived(info?.timeControl?.initialMs != null);
+	const sideToMove = $derived.by(() => {
+		const turn = xfen.split(' ')[1];
+		return turn?.startsWith('w') ? 'white' : turn?.startsWith('b') ? 'black' : null;
+	});
+
+	/**
+	 * Nameplate labels. The empty seat is the house bot's seat on this page,
+	 * but the solo override lets the seated human drive it too; either way the
+	 * bar keys everything by seat color and shows that seat's clock.
+	 */
+	function seatName(side: Side): string {
+		const botSeat: Side | null =
+			info?.whiteId === null ? 'white' : info?.blackId === null ? 'black' : null;
+		if (side === botSeat) return `Level ${urlLevel + 1} bot`;
+		if (info?.yourColor === side) return 'You';
+		return side === 'white' ? 'White' : 'Black';
+	}
 
 	const overText = $derived.by(() => {
 		if (!over) return '';
@@ -136,6 +171,10 @@
 					clock?: unknown;
 				};
 				applyState(payload);
+				if (payload.clock) {
+					clock = payload.clock as ClockView;
+					clockAt = Date.now();
+				}
 				syncThinking();
 			};
 			const onOver = (p: unknown) => {
@@ -164,6 +203,10 @@
 					if (!join.ok || !join.state) return;
 					info = join.game ?? null;
 					orientation = info?.yourColor === 'black' ? 'black' : 'white';
+					// Re-sync on every reconnect: the join ack is the authoritative
+					// clock snapshot, so draining restarts from it without drift.
+					clock = (join.clock as ClockView | null) ?? null;
+					clockAt = Date.now();
 					if (info?.status === 'finished') {
 						over = {
 							result: String(info.result ?? 'draw'),
@@ -215,6 +258,18 @@
 		{#if moveError}
 			<p class="move-error" role="alert">{moveError}</p>
 		{/if}
+		{#if timed}
+			<!-- Untimed bot games render no bar at all; timed ones seat the twin
+			     dials around the board exactly like the live game page. -->
+			<ClockBar
+				{clock}
+				{clockAt}
+				timed
+				turn={sideToMove}
+				whiteName={seatName('white')}
+				blackName={seatName('black')}
+			/>
+		{/if}
 		<Board
 			{xfen}
 			{dests}
@@ -227,6 +282,16 @@
 			{pockets}
 			onMove={(uci) => void onMove(uci)}
 		/>
+		{#if timed}
+			<ClockBar
+				{clock}
+				{clockAt}
+				timed
+				turn={sideToMove}
+				whiteName={seatName('white')}
+				blackName={seatName('black')}
+			/>
+		{/if}
 	</div>
 	<aside class="rail">
 		<h2>Moves</h2>
