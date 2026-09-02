@@ -1,4 +1,4 @@
-import { relations } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 import {
 	bigserial,
 	boolean,
@@ -35,7 +35,15 @@ export const users = pgTable(
 		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 		updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull()
 	},
-	(t) => [uniqueIndex('users_name_key').on(t.name), uniqueIndex('users_email_key').on(t.email)]
+	(t) => [
+		uniqueIndex('users_name_key').on(t.name),
+		uniqueIndex('users_email_key').on(t.email),
+		// Mirrors migration 0002: at most one administrator row may exist.
+		// Declared here so drizzle-kit introspection matches the database.
+		uniqueIndex('users_role_admin_key')
+			.on(t.role)
+			.where(sql`role = 'admin'`)
+	]
 );
 
 export const sessions = pgTable(
@@ -134,6 +142,8 @@ export const games = pgTable(
 		moveCount: integer('move_count').default(0).notNull(),
 		whiteId: uuid('white_id').references(() => users.id, { onDelete: 'set null' }),
 		blackId: uuid('black_id').references(() => users.id, { onDelete: 'set null' }),
+		/** Bot strength (0-4) for solo games. Null for games between humans. */
+		botLevel: integer('bot_level'),
 		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 		startedAt: timestamp('started_at', { withTimezone: true }),
 		finishedAt: timestamp('finished_at', { withTimezone: true }),

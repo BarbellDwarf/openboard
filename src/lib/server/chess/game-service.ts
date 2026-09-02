@@ -26,6 +26,8 @@ export interface CreateGameInput {
 	timeControl: TimeControl;
 	whiteId: string | null;
 	blackId: string | null;
+	/** Bot strength for solo games; null (the default) for human games. */
+	botLevel?: number | null;
 }
 
 export async function createGame(input: CreateGameInput): Promise<string> {
@@ -42,6 +44,7 @@ export async function createGame(input: CreateGameInput): Promise<string> {
 			currentXfen: state.xfen,
 			whiteId: input.whiteId,
 			blackId: input.blackId,
+			botLevel: input.botLevel ?? null,
 			startedAt: new Date(),
 			lastMoveAt: new Date()
 		})
@@ -59,6 +62,8 @@ export interface LoadedGame {
 	timeControl: TimeControl;
 	whiteId: string | null;
 	blackId: string | null;
+	/** Bot strength for solo games; null for games between humans. */
+	botLevel: number | null;
 	state: EngineState;
 	sanMoves: string[];
 	lastMoveAtMs: number;
@@ -94,6 +99,7 @@ export async function loadGame(gameId: string): Promise<LoadedGame | null> {
 		},
 		whiteId: game.whiteId,
 		blackId: game.blackId,
+		botLevel: game.botLevel,
 		state,
 		sanMoves: rows.map((r) => r.san),
 		lastMoveAtMs: (game.lastMoveAt ?? game.startedAt ?? game.createdAt).getTime()
@@ -175,11 +181,16 @@ export async function persistMove(gameId: string, uci: string): Promise<MovePers
 
 	// On-board finishes (mate, stalemate, variant wins, repetition, fifty-move)
 	// finalize through completeGame so rated games get Glicko updates too.
+	// When the claim is lost or throws, another path finished this game and owns
+	// the result: report the move as unfinished so callers never broadcast a
+	// conflicting outcome on top of the settled one.
 	if (finished) {
 		try {
-			await completeGame(gameId, finished.result, finished.termination);
+			const claimed = await completeGame(gameId, finished.result, finished.termination);
+			if (!claimed) finished = null;
 		} catch (error) {
 			console.error('[game] post-move finalize failed:', error);
+			finished = null;
 		}
 	}
 

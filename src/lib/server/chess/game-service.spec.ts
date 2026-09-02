@@ -11,8 +11,27 @@ import { PgDialect } from 'drizzle-orm/pg-core';
 
 const dbMock = vi.hoisted(() => {
 	const pendingReturning: unknown[][] = [];
+	// FIFO of result sets consumed by awaited select terminals, in call order.
+	const pendingSelects: unknown[][] = [];
 	const lastStatement: { set?: unknown; where?: unknown } = {};
+	let updateFailure: Error | null = null;
+
+	function selectBuilder() {
+		const builder = {
+			from: () => builder,
+			where: () => builder,
+			async orderBy() {
+				return pendingSelects.length > 0 ? pendingSelects.shift() : [];
+			},
+			async limit() {
+				return pendingSelects.length > 0 ? pendingSelects.shift() : [];
+			}
+		};
+		return builder;
+	}
+
 	const db = {
+		select: () => selectBuilder(),
 		update(_table: unknown) {
 			const builder = {
 				set(values: unknown) {
@@ -24,13 +43,37 @@ const dbMock = vi.hoisted(() => {
 					return builder;
 				},
 				async returning() {
+					if (updateFailure) throw updateFailure;
 					return pendingReturning.length > 0 ? pendingReturning.shift() : [];
 				}
 			};
 			return builder;
+		},
+		insert(_table: unknown) {
+			const builder = {
+				values: async () => {}
+			};
+			return builder;
+		},
+		async transaction(callback: (tx: unknown) => Promise<unknown>) {
+			return callback({
+				insert: () => ({ values: async () => {} }),
+				update: () => ({ set: () => ({ where: async () => {} }) })
+			});
 		}
 	};
-	return { db, pendingReturning, lastStatement };
+	return {
+		db,
+		pendingReturning,
+		pendingSelects,
+		lastStatement,
+		failNextUpdateWith(error: Error) {
+			updateFailure = error;
+		},
+		clearUpdateFailure() {
+			updateFailure = null;
+		}
+	};
 });
 
 vi.mock('$lib/server/db', () => ({ db: dbMock.db }));
@@ -38,7 +81,8 @@ vi.mock('$lib/server/db', () => ({ db: dbMock.db }));
 const ratingsMock = vi.hoisted(() => ({ applyRatedResult: vi.fn() }));
 vi.mock('$lib/server/ratings/service', () => ratingsMock);
 
-import { completeGame } from './game-service';
+import { completeGame, persistMove } from './game-service';
+import { applyMove, startPosition } from './engine';
 
 const ratedRow = {
 	rated: true,
@@ -52,8 +96,10 @@ const ratedRow = {
 
 beforeEach(() => {
 	dbMock.pendingReturning.length = 0;
+	dbMock.pendingSelects.length = 0;
 	dbMock.lastStatement.set = undefined;
 	dbMock.lastStatement.where = undefined;
+	dbMock.clearUpdateFailure();
 	ratingsMock.applyRatedResult.mockReset();
 	ratingsMock.applyRatedResult.mockResolvedValue(undefined);
 });
@@ -109,5 +155,83 @@ describe('atomic game finalization', () => {
 			result: 'draw',
 			termination: 'fifty-moves'
 		});
+	});
+});
+
+describe('post-move finish reporting', () => {
+	// Position after 1. f3 e5 2. g4, black to move: d8h4 lands checkmate.
+	// loadGame rebuilds positions by replaying move rows, so the fixture
+	// derives both the history rows and the final xfen through the real engine.
+	function preMateFixture(): {
+		rows: Array<{ ply: number; uci: string; san: string }>;
+		xfen: string;
+	} {
+		let state = startPosition('standard');
+		const rows = ['f2f3', 'e7e5', 'g2g4'].map((uci, index) => {
+			const applied = applyMove('standard', state.xfen, uci);
+			if (!applied.ok) throw new Error(`${uci} must be legal`);
+			state = applied.state;
+			return { ply: index + 1, uci, san: applied.san };
+		});
+		return { rows, xfen: state.xfen };
+	}
+
+	function startedRow(currentXfen: string) {
+		return {
+			id: 'game-pm',
+			variant: 'standard',
+			rated: false,
+			status: 'started',
+			result: null,
+			termination: null,
+			initialMs: null,
+			incrementMs: null,
+			daysPerMove: null,
+			currentXfen,
+			pgn: null,
+			moveCount: 3,
+			whiteId: '11111111-1111-1111-1111-111111111111',
+			blackId: '22222222-2222-2222-2222-222222222222',
+			createdAt: new Date(1_000),
+			startedAt: new Date(1_000),
+			finishedAt: null,
+			lastMoveAt: new Date(2_000)
+		};
+	}
+
+	async function playMatingMove(): Promise<Awaited<ReturnType<typeof persistMove>>> {
+		const fixture = preMateFixture();
+		dbMock.pendingSelects.push(
+			[startedRow(fixture.xfen)],
+			fixture.rows,
+			fixture.rows.map(() => ({ xfenAfter: 'n/a' }))
+		);
+		return persistMove('game-pm', 'd8h4');
+	}
+
+	it('reports the finish when its own finalize claims the row', async () => {
+		dbMock.pendingReturning.push([
+			{ rated: false, variant: 'standard', initialMs: null, incrementMs: null, daysPerMove: null }
+		]);
+		const result = await playMatingMove();
+		expect(result.applied).toBe(true);
+		expect(result.finished).toEqual({ result: 'black', termination: 'checkmate' });
+	});
+
+	it('reports unfinished when its own finalize threw', async () => {
+		// The row stays started while the finalize failed; reporting finished
+		// would make clients score a game the database never closed.
+		dbMock.failNextUpdateWith(new Error('finalize exploded'));
+		const result = await playMatingMove();
+		expect(result.applied).toBe(true);
+		expect(result.finished).toBeNull();
+	});
+
+	it('reports unfinished when a racing path already claimed the finish', async () => {
+		// A flag sweeper won the conditional UPDATE; its result owns the room.
+		dbMock.pendingReturning.push([]);
+		const result = await playMatingMove();
+		expect(result.applied).toBe(true);
+		expect(result.finished).toBeNull();
 	});
 });

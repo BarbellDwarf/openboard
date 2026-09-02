@@ -28,14 +28,15 @@ export function getSocket(): Promise<Socket> {
 /**
  * Emit and await the server's ack, bounded by ACK_TIMEOUT_MS so a lost
  * response surfaces as a rejection instead of hanging the caller forever.
- * Exported for tests.
+ * socket.timeout() also arms socket.io's own reaper, so the pending callback
+ * is released from the client's internal map instead of leaking until the
+ * socket closes. Exported for tests.
  */
 export function emitAck<T>(socket: Socket, event: string, payload: unknown): Promise<T> {
 	return new Promise((resolve, reject) => {
-		const timer = setTimeout(() => reject(new AckTimeoutError(event)), ACK_TIMEOUT_MS);
-		socket.emit(event, payload, (response: T) => {
-			clearTimeout(timer);
-			resolve(response);
+		socket.timeout(ACK_TIMEOUT_MS).emit(event, payload, (error: unknown, response: T) => {
+			if (error) reject(new AckTimeoutError(event));
+			else resolve(response);
 		});
 	});
 }

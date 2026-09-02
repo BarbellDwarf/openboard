@@ -16,14 +16,14 @@ cp .env.example .env
 
 Edit `.env`:
 
-| Variable                                                                   | Required | Purpose                                                                                                                                                               |
-| -------------------------------------------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| DATABASE_URL                                                               | yes      | Postgres connection string. The compose file defaults to `postgres://openboard:openboard@db:5432/openboard`.                                                          |
-| ORIGIN                                                                     | yes      | Public URL of the site, e.g. `https://chess.example.com`. Used for auth callbacks and CSRF checks. Compose defaults to `http://localhost:3000`; override in `.env`.   |
-| BETTER_AUTH_SECRET                                                         | yes      | Long random string. Generate with `openssl rand -base64 32`. Required: compose refuses to start without it.                                                           |
-| PORT / HOST                                                                | no       | Listen address for the app container. Defaults to 3000 on 0.0.0.0.                                                                                                    |
-| VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY / VAPID_SUBJECT                       | optional | Enables web push. Generate with `npx web-push generate-vapid-keys`. Subject is a `mailto:` address. Without these, in-app notifications still work but push does not. |
-| OIDC_ISSUER_URL / OIDC_CLIENT_ID / OIDC_CLIENT_SECRET / OIDC_PROVIDER_NAME | optional | Generic OIDC sign-in. See docs/oidc.md.                                                                                                                               |
+| Variable                                                                   | Required | Purpose                                                                                                                                                                         |
+| -------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DATABASE_URL                                                               | no       | Compose-managed: the app container gets `postgres://openboard:openboard@db:5432/openboard` from docker-compose.yml. Set it yourself only when pointing at an external Postgres. |
+| ORIGIN                                                                     | yes      | Public URL of the site, e.g. `https://chess.example.com`. Used for auth callbacks and CSRF checks. Compose defaults to `http://localhost:3000`; override in `.env`.             |
+| BETTER_AUTH_SECRET                                                         | yes      | Long random string. Generate with `openssl rand -base64 32`. Required: compose refuses to start without it.                                                                     |
+| PORT / HOST                                                                | no       | Listen address for the app container. Defaults to 3000 on 0.0.0.0.                                                                                                              |
+| VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY / VAPID_SUBJECT                       | optional | Enables web push. Generate with `npx web-push generate-vapid-keys`. Subject is a `mailto:` address. Without these, in-app notifications still work but push does not.           |
+| OIDC_ISSUER_URL / OIDC_CLIENT_ID / OIDC_CLIENT_SECRET / OIDC_PROVIDER_NAME | optional | Generic OIDC sign-in. See docs/oidc.md.                                                                                                                                         |
 
 Then:
 

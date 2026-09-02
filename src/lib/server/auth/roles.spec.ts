@@ -94,4 +94,19 @@ describe('promoteToAdmin', () => {
 		dbMock.returning.mockResolvedValueOnce([]);
 		await expect(promoteToAdmin('late-comer')).resolves.toBe(false);
 	});
+
+	it('loses cleanly when the partial admin index rejects a concurrent claim', async () => {
+		// Two setups racing under READ COMMITTED both pass the NOT EXISTS
+		// predicate; migration 0002's unique index turns the loser's UPDATE
+		// into SQLSTATE 23505, which must surface as false, not a crash.
+		dbMock.returning.mockRejectedValueOnce(
+			Object.assign(new Error('duplicate key value violates unique constraint'), { code: '23505' })
+		);
+		await expect(promoteToAdmin('racing-setup')).resolves.toBe(false);
+	});
+
+	it('propagates database failures that are not lost-claim races', async () => {
+		dbMock.returning.mockRejectedValueOnce(new Error('connection refused'));
+		await expect(promoteToAdmin('any-user')).rejects.toThrow('connection refused');
+	});
 });

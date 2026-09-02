@@ -28,6 +28,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		speedClass?: string;
 		rated?: boolean;
 		colorChoice?: string;
+		level?: number;
 		days?: number;
 		challengeId?: string;
 	};
@@ -51,12 +52,14 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		const userColor: Color = choice === 'black' ? 'black' : 'white';
 		const whiteId = userColor === 'white' ? locals.user.id : null;
 		const blackId = userColor === 'black' ? locals.user.id : null;
+		const level = Math.min(4, Math.max(0, Math.round(Number(body.level ?? 2)) || 0));
 		const gameId = await createGame({
 			variant,
 			rated: false,
 			timeControl: { initialMs: tc.initialMs, incrementMs: tc.incrementMs, daysPerMove: null },
 			whiteId,
-			blackId
+			blackId,
+			botLevel: level
 		});
 		if (userColor === 'white') {
 			await db

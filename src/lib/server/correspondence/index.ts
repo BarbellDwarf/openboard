@@ -33,25 +33,32 @@ export async function sweepOnce(): Promise<number> {
 		if (elapsed <= deadlineMs) continue;
 		const turn = row.currentXfen?.split(' ')[1];
 		const result = turn === 'b' ? 'white' : 'black';
+		let claimed: boolean;
 		try {
 			// Guarded finalize: ratings apply, and a move made while we were
 			// looking at the row cancels this timeout.
-			await completeGame(row.id, result, 'timeout', {
+			claimed = await completeGame(row.id, result, 'timeout', {
 				onlyIfLastMoveAt: new Date(row.lastMoveAt)
 			});
-			finalized++;
 		} catch (error) {
 			console.error('[correspondence] sweep finalize failed:', error);
 			continue;
 		}
-		void notifyUser(row.whiteId ?? '', 'game-result', {
-			body: `Correspondence game decided by flag: ${result} wins.`,
-			url: `/game/${row.id}`
-		});
-		void notifyUser(row.blackId ?? '', 'game-result', {
-			body: `Correspondence game decided by flag: ${result} wins.`,
-			url: `/game/${row.id}`
-		});
+		// Lost the claim: the game finished through another path, which owns the
+		// notifications. Only a won claim counts as finalized.
+		if (!claimed) continue;
+		finalized++;
+		const body = `Correspondence game decided by flag: ${result} wins.`;
+		if (row.whiteId)
+			void notifyUser(row.whiteId, 'game-result', {
+				body,
+				url: `/game/${row.id}`
+			});
+		if (row.blackId)
+			void notifyUser(row.blackId, 'game-result', {
+				body,
+				url: `/game/${row.id}`
+			});
 	}
 	return finalized;
 }

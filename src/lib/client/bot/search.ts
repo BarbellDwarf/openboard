@@ -132,6 +132,10 @@ export function chooseBotMove(variant: string, xfen: string, level: number): str
 		const pick = pool[Math.floor(Math.random() * pool.length)];
 		return pick.uci;
 	}
-	const best = candidates[0];
-	return best.uci;
+	// Material-equal moves otherwise shuffle deterministically (Na3 then Nb1
+	// forever); break ties at random so the bot does not dance in place.
+	const bestScore = candidates[0].score;
+	const ties = candidates.filter((c) => bestScore - c.score <= 10);
+	const pick = ties[Math.floor(Math.random() * ties.length)];
+	return pick.uci;
 }
