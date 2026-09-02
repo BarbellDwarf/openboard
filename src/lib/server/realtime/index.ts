@@ -152,11 +152,19 @@ export function injectSocketIO(io: IOServer): void {
 				if (!socket.data.userId) return ack?.({ ok: false, reason: 'unauthorized' });
 				if (rateLimited()) return ack?.({ ok: false, reason: 'rate-limited' });
 
-				const color = await playerColorFor(gameId, socket.data.userId);
-				if (!color) return ack?.({ ok: false, reason: 'not-a-player' });
-
 				const game = await loadGame(gameId);
 				if (!game || game.status !== 'started') return ack?.({ ok: false, reason: 'not-active' });
+
+				let color = await playerColorFor(gameId, socket.data.userId);
+				// Solo/bot mode: the lone seated player drives empty seats whenever
+				// it is that seat's turn.
+				const emptySeat = game.whiteId === null ? 'white' : game.blackId === null ? 'black' : null;
+				const turnSeat = game.state.turn;
+				const isSeated = game.whiteId === socket.data.userId || game.blackId === socket.data.userId;
+				if (emptySeat && turnSeat === emptySeat && isSeated) {
+					color = emptySeat;
+				}
+				if (!color) return ack?.({ ok: false, reason: 'not-a-player' });
 				if (game.state.turn !== color) return ack?.({ ok: false, reason: 'not-your-turn' });
 
 				const room = roomFor(gameId);

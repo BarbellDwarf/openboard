@@ -10,7 +10,7 @@ await build({
 	platform: 'node',
 	format: 'esm',
 	target: 'node22',
-	external: ['pg', 'socket.io'],
+	packages: 'external',
 	alias: {
 		$lib: path.resolve(process.cwd(), 'src/lib')
 	},
