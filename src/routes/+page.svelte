@@ -4,26 +4,26 @@
 
 	import Board from '$lib/components/board/Board.svelte';
 
+	const START_XFEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+
 	const demo = $state({
 		xfen: '',
 		dests: {} as Record<string, string[]>,
 		last: null as [string, string] | null
 	});
 
-	onMount(() => {
-		void (async () => {
-			const res = await fetch('/api/demo/move', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ xfen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1' })
-			});
-			if (res.ok) {
-				const d = await res.json();
-				demo.xfen = d.xfen;
-				demo.dests = d.dests;
-			}
-		})();
-	});
+	async function reset(): Promise<void> {
+		const res = await fetch('/api/demo/move', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ xfen: START_XFEN })
+		});
+		if (!res.ok) return;
+		const d = await res.json();
+		demo.xfen = d.xfen;
+		demo.dests = d.dests;
+		demo.last = null;
+	}
 
 	async function step(uci: string): Promise<void> {
 		const res = await fetch('/api/demo/move', {
@@ -41,10 +41,11 @@
 	const scriptMoves = ['e2e4', 'e7e5', 'g1f3', 'b8c6', 'f1b5'];
 	let scriptIndex = 0;
 	onMount(() => {
+		void reset();
 		const id = setInterval(() => {
 			if (scriptIndex >= scriptMoves.length) {
 				scriptIndex = 0;
-				void step('e1e2').then(() => step('e8e7'));
+				void reset();
 				return;
 			}
 			void step(scriptMoves[scriptIndex]);
