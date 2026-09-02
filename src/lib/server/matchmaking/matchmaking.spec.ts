@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { bandFor, pairCompatible, type PoolEntry } from './index';
+import {
+	bandFor,
+	challengeClaimable,
+	pairCompatible,
+	POOL_ENTRY_TTL_MS,
+	type PoolEntry
+} from './index';
 
 const entry = (over: Partial<PoolEntry> = {}): PoolEntry => ({
 	userId: 'waiting-user',
@@ -87,5 +93,29 @@ describe('quick-pair compatibility', () => {
 			0
 		);
 		expect(ok).toBe(true);
+	});
+
+	it('ignores pool entries past the TTL', () => {
+		const prefs = { speedClass: 'blitz', variant: 'standard', rated: true } as const;
+		expect(pairCompatible(entry(), prefs, () => 1500, POOL_ENTRY_TTL_MS)).toBe(true);
+		expect(pairCompatible(entry(), prefs, () => 1500, POOL_ENTRY_TTL_MS + 1)).toBe(false);
+	});
+});
+
+describe('challenge claimability', () => {
+	const expiry = new Date(10_000);
+
+	it('accepts an open challenge that has not expired', () => {
+		expect(challengeClaimable({ status: 'open', expiresAt: expiry }, new Date(9_999))).toBe(true);
+	});
+
+	it('rejects a claim after expiry', () => {
+		expect(challengeClaimable({ status: 'open', expiresAt: expiry }, new Date(10_000))).toBe(false);
+		expect(challengeClaimable({ status: 'open', expiresAt: expiry }, new Date(20_000))).toBe(false);
+	});
+
+	it('rejects anything that is no longer open', () => {
+		expect(challengeClaimable({ status: 'accepted', expiresAt: expiry }, new Date(0))).toBe(false);
+		expect(challengeClaimable({ status: 'expired', expiresAt: expiry }, new Date(0))).toBe(false);
 	});
 });

@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 
-import { and, eq, gt } from 'drizzle-orm';
+import { and, eq, gt, lte } from 'drizzle-orm';
 
 import { db } from '$lib/server/db';
 import { challenges, games, gamePlayers, ratings, users } from '$lib/server/db/schema';
@@ -100,24 +100,46 @@ export async function listOpenChallenges() {
 		.where(and(eq(challenges.status, 'open'), gt(challenges.expiresAt, new Date())));
 }
 
+/**
+ * Pure claim rule so it stays unit-testable: a challenge can only be claimed
+ * while it is still open and its expiry has not passed.
+ */
+export function challengeClaimable(
+	challenge: { status: string; expiresAt: Date },
+	now: Date = new Date()
+): boolean {
+	return challenge.status === 'open' && challenge.expiresAt.getTime() > now.getTime();
+}
+
 export async function acceptChallenge(
 	challengeId: string,
 	userId: string
 ): Promise<{ ok: boolean; gameId?: string }> {
 	// Cheap pre-check so the common self-accept case never claims anything.
 	const [existing] = await db
-		.select({ challengerId: challenges.challengerId })
+		.select({
+			status: challenges.status,
+			expiresAt: challenges.expiresAt,
+			challengerId: challenges.challengerId
+		})
 		.from(challenges)
 		.where(eq(challenges.id, challengeId))
 		.limit(1);
 	if (!existing) return { ok: false };
+	if (!challengeClaimable(existing)) return { ok: false };
 	if (existing.challengerId === userId) return { ok: false };
 
 	// Claim the challenge atomically: only one accepter can flip status.
 	const claimed = await db
 		.update(challenges)
 		.set({ status: 'accepted' })
-		.where(and(eq(challenges.id, challengeId), eq(challenges.status, 'open')))
+		.where(
+			and(
+				eq(challenges.id, challengeId),
+				eq(challenges.status, 'open'),
+				gt(challenges.expiresAt, new Date())
+			)
+		)
 		.returning();
 	const challenge = claimed[0];
 	if (!challenge) return { ok: false };
@@ -168,10 +190,13 @@ export async function acceptChallenge(
 	]);
 	await db.update(games).set({ status: 'started' }).where(eq(games.id, gameId));
 
-	void db
-		.update(challenges)
+	// Fire-and-forget housekeeping: flip open challenges past their expiry to
+	// expired. The .catch is what kicks off the lazy query builder and keeps a
+	// transient db error from becoming an unhandled rejection.
+	db.update(challenges)
 		.set({ status: 'expired' })
-		.where(and(eq(challenges.status, 'open'), eq(challenges.challengerId, '')));
+		.where(and(eq(challenges.status, 'open'), lte(challenges.expiresAt, new Date())))
+		.catch(() => {});
 
 	return { ok: true, gameId };
 }
@@ -188,6 +213,8 @@ const BASE_BAND = 100;
 const BAND_STEP_MS = 5_000;
 const BAND_STEP = 100;
 const MAX_BAND = 800;
+/** Pool entries older than this are abandoned ghosts and stop pairing. */
+export const POOL_ENTRY_TTL_MS = 10 * 60 * 1000;
 
 /** Widening search band: 100 at join, +100 every 5 s, capped at 800. */
 export function bandFor(waitedMs: number): number {
@@ -200,7 +227,8 @@ export function bandFor(waitedMs: number): number {
 /**
  * Pure pairing decision so the rules stay unit-testable: identical speed,
  * variant and rated flag, plus a rating gap inside the waiting side's
- * (widening) band. Missing ratings count as the 1500 starting rating.
+ * (widening) band. Entries past the pool TTL no longer pair, and missing
+ * ratings count as the 1500 starting rating.
  */
 export function pairCompatible(
 	entry: PoolEntry,
@@ -208,6 +236,7 @@ export function pairCompatible(
 	ratingOf: (who: 'entry' | 'incoming') => number | null,
 	nowMs: number
 ): boolean {
+	if (nowMs - entry.since > POOL_ENTRY_TTL_MS) return false;
 	if (entry.speedClass !== incoming.speedClass) return false;
 	if (entry.variant !== incoming.variant) return false;
 	if (entry.rated !== incoming.rated) return false;
@@ -263,6 +292,11 @@ export async function joinQuickPair(
 	try {
 		for (const [otherId, entry] of quickPairPool.entries()) {
 			if (entry.userId === userId) continue;
+			// Drop abandoned entries so they never pair and never pile up.
+			if (Date.now() - entry.since > POOL_ENTRY_TTL_MS) {
+				leaveQuickPair(entry.userId);
+				continue;
+			}
 			const mine = await ratingForSpeed(
 				userId,
 				variant,
