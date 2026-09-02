@@ -3,7 +3,15 @@ import { and, asc, eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { games, moves as movesTable, users } from '$lib/server/db/schema';
 
-import { applyMove, drawByFiftyMoves, drawByThreefold, startPosition } from './engine';
+import {
+	applyMove,
+	chess960StartFen,
+	drawByFiftyMoves,
+	drawByThreefold,
+	loadPosition,
+	startPosition,
+	stateFromPosition
+} from './engine';
 import { buildPgn } from './pgn';
 import type {
 	Color,
@@ -31,7 +39,13 @@ export interface CreateGameInput {
 }
 
 export async function createGame(input: CreateGameInput): Promise<string> {
-	const state = startPosition(input.variant);
+	// Chess960 picks a random legal back rank at creation; other variants use
+	// their fixed start position. The array is stored so PGNs and repetition
+	// detection both replay from the real start.
+	const startFen = input.variant === 'chess960' ? chess960StartFen() : null;
+	const state = startFen
+		? stateFromPosition(loadPosition('chess960', startFen), 'chess960')
+		: startPosition(input.variant);
 	const [row] = await db
 		.insert(games)
 		.values({
@@ -42,6 +56,7 @@ export async function createGame(input: CreateGameInput): Promise<string> {
 			daysPerMove: input.timeControl.daysPerMove,
 			status: 'started',
 			currentXfen: state.xfen,
+			startFen,
 			whiteId: input.whiteId,
 			blackId: input.blackId,
 			botLevel: input.botLevel ?? null,
@@ -64,6 +79,8 @@ export interface LoadedGame {
 	blackId: string | null;
 	/** Bot strength for solo games; null for games between humans. */
 	botLevel: number | null;
+	/** Shuffled start for Chess960; null otherwise. Replay seeds from here. */
+	startFen: string | null;
 	state: EngineState;
 	sanMoves: string[];
 	lastMoveAtMs: number;
@@ -79,7 +96,9 @@ export async function loadGame(gameId: string): Promise<LoadedGame | null> {
 		.where(eq(movesTable.gameId, gameId))
 		.orderBy(asc(movesTable.ply));
 
-	let state: EngineState = startPosition(game.variant as VariantId);
+	let state: EngineState = game.startFen
+		? stateFromPosition(loadPosition(game.variant as VariantId, game.startFen), 'chess960')
+		: startPosition(game.variant as VariantId);
 	for (const row of rows) {
 		const applied = applyMove(state.variant, state.xfen, row.uci);
 		if (applied.ok) state = applied.state;
@@ -100,6 +119,7 @@ export async function loadGame(gameId: string): Promise<LoadedGame | null> {
 		whiteId: game.whiteId,
 		blackId: game.blackId,
 		botLevel: game.botLevel,
+		startFen: game.startFen,
 		state,
 		sanMoves: rows.map((r) => r.san),
 		lastMoveAtMs: (game.lastMoveAt ?? game.startedAt ?? game.createdAt).getTime()
@@ -143,10 +163,13 @@ export async function persistMove(gameId: string, uci: string): Promise<MovePers
 		white: loaded.whiteId ? userNameWhite : botSeatName(loaded.botLevel),
 		black: loaded.blackId ? userNameBlack : botSeatName(loaded.botLevel)
 	};
-	const initialXfen = startPosition(loaded.variant).xfen;
+	const initialXfen = loaded.startFen ?? startPosition(loaded.variant).xfen;
 
 	let finished: { result: ResultValue; termination: Termination } | null = outcome.finished;
-	if (!finished && drawByThreefold(loaded.variant, history, outcome.state.xfen))
+	if (
+		!finished &&
+		drawByThreefold(loaded.variant, history, outcome.state.xfen, loaded.startFen ?? undefined)
+	)
 		finished = { result: 'draw', termination: 'repetition' };
 	if (!finished && drawByFiftyMoves(outcome.state.xfen)) {
 		finished = { result: 'draw', termination: 'fifty-moves' };

@@ -2,16 +2,9 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 
-	const VARIANTS = [
-		'standard',
-		'chess960',
-		'crazyhouse',
-		'kingofthehill',
-		'threecheck',
-		'atomic',
-		'horde',
-		'racingkings'
-	] as const;
+	import { VARIANT_IDS, VARIANT_LABELS } from '$lib/client/variantLabels';
+
+	const VARIANTS = VARIANT_IDS;
 	const SPEEDS = [
 		{ id: 'bullet', label: 'Bullet 1+0' },
 		{ id: 'blitz', label: 'Blitz 5+2' },
@@ -91,7 +84,7 @@
 					<span>Variant</span>
 					<select bind:value={variant}>
 						{#each VARIANTS as v (v)}
-							<option value={v}>{v}</option>
+							<option value={v}>{VARIANT_LABELS[v]}</option>
 						{/each}
 					</select>
 				</label>

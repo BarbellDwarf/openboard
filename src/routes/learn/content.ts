@@ -51,7 +51,7 @@ export const LEARN_VARIANT_PAGES: readonly VariantPage[] = [
 		],
 		rules: [
 			'Castling is presented on the rooks. Your king shows destinations on its own rook squares: drag the king onto a rook and the server completes the usual king-and-rook shuffle for you.',
-			'Known limitation of this build: every Chess960 game starts from the traditional starting array rather than a shuffled one. That changes how castling feels, not how it resolves.'
+			'Each game starts from a randomly shuffled legal back rank, so no two Chess960 games share the same opening array.'
 		],
 		tips: [
 			'If dragging the king onto a rook feels odd at first, play a casual bot game to rehearse castling before you rate one.',

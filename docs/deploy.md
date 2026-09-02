@@ -82,10 +82,10 @@ Socket.IO upgrades requests from polling to WebSocket. Whatever terminates TLS m
 
 ### Multiple origins
 
-OpenBoard trusts exactly one origin, the `ORIGIN` environment variable you publish. If you reach the server from more than one URL, a LAN IP while you harden the reverse proxy, a test hostname plus the domain, or during a domain migration, requests from the second origin will be rejected. `better-auth` reads a comma-separated `BETTER_AUTH_TRUSTED_ORIGINS` list alongside `ORIGIN`; list every origin you use there. The docker-compose file forwards `BETTER_AUTH_TRUSTED_ORIGINS` through automatically, so just add it to `.env`:
+OpenBoard trusts exactly one origin, the `ORIGIN` environment variable you publish. If you reach the server from more than one URL, a LAN address while you harden the reverse proxy, a test hostname plus the domain, or during a domain migration, requests from the second origin will be rejected. `better-auth` reads a comma-separated `BETTER_AUTH_TRUSTED_ORIGINS` list alongside `ORIGIN`; list every origin you use there. The docker-compose file forwards `BETTER_AUTH_TRUSTED_ORIGINS` through automatically, so just add it to `.env`:
 
 ```env
-BETTER_AUTH_TRUSTED_ORIGINS=http://server.lan:3000,http://localhost:3000
+BETTER_AUTH_TRUSTED_ORIGINS=http://chess.example.com,http://localhost:3000
 ```
 
 Note that session cookies are origin-scoped: signing in through one URL does not authenticate a different URL.

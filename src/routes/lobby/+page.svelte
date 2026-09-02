@@ -2,6 +2,7 @@
 	import { resolve } from '$app/paths';
 	import { invalidateAll } from '$app/navigation';
 
+	import { VARIANT_IDS, VARIANT_LABELS } from '$lib/client/variantLabels';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -59,8 +60,8 @@
 			<label>
 				Variant
 				<select bind:value={variant}>
-					{#each ['standard', 'chess960', 'crazyhouse', 'kingofthehill', 'threecheck', 'atomic', 'horde', 'racingkings'] as v (v)}
-						<option value={v}>{v}</option>
+					{#each VARIANT_IDS as v (v)}
+						<option value={v}>{VARIANT_LABELS[v]}</option>
 					{/each}
 				</select>
 			</label>
