@@ -28,6 +28,12 @@
 		 * (above and below), so exactly one instance per page should opt in.
 		 */
 		announceLow?: boolean;
+		/**
+		 * Fires once when either clock first drops under the low-time sound
+		 * threshold (30 s).  The argument identifies which side crossed.
+		 * Mount exactly one instance per page that wants the callback.
+		 */
+		onLowTime?: (side: Side) => void;
 	}
 
 	let {
@@ -38,7 +44,8 @@
 		whiteName,
 		blackName,
 		flagged = null,
-		announceLow = false
+		announceLow = false,
+		onLowTime
 	}: Props = $props();
 
 	const showDials = $derived(!!clock && timed);
@@ -105,6 +112,34 @@
 			crossed.push('Black clock under ten seconds.');
 		}
 		if (crossed.length > 0) lowNotice = crossed.join(' ');
+	});
+
+	// Low-time sound: fires once per side when the drained remainder first
+	// drops under 30 seconds.  Independent of the 10 s visual threshold above.
+	const LOW_TIME_SOUND_MS = 30_000;
+	const lowSoundFired = { white: false, black: false };
+	let lowSoundPrimed = false;
+
+	$effect(() => {
+		if (!onLowTime) return;
+		const white = whiteRemainder;
+		const black = blackRemainder;
+		if (!Number.isFinite(white) && !Number.isFinite(black)) return;
+		// Prime on the first read so pre-existing sub-30 s positions stay silent.
+		if (!lowSoundPrimed) {
+			lowSoundPrimed = true;
+			lowSoundFired.white = white < LOW_TIME_SOUND_MS;
+			lowSoundFired.black = black < LOW_TIME_SOUND_MS;
+			return;
+		}
+		if (!lowSoundFired.white && white < LOW_TIME_SOUND_MS) {
+			lowSoundFired.white = true;
+			onLowTime('white');
+		}
+		if (!lowSoundFired.black && black < LOW_TIME_SOUND_MS) {
+			lowSoundFired.black = true;
+			onLowTime('black');
+		}
 	});
 </script>
 

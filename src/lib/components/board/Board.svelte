@@ -485,4 +485,21 @@
 		overflow: hidden;
 		clip-path: inset(50%);
 	}
+
+	/* ---- Drag pickup lift ---- chessground sets transform inline every frame,
+	   so we must never transition transform.  The lift reads as depth via
+	   filter effects only. */
+	.ob-board :global(piece.dragging) {
+		filter: drop-shadow(0 4px 6px rgb(0 0 0 / 45%)) brightness(1.06);
+		z-index: 20;
+		cursor: grabbing;
+	}
+
+	/* ---- Drop settle bounce ---- brief scale-down after a piece lands.
+	   The animation is short enough that applying it to every piece in the
+	   board is harmless; only the just-placed piece is visible during the
+	   window. */
+	.ob-board :global(piece) {
+		animation: ob-settle 120ms ease-out;
+	}
 </style>
