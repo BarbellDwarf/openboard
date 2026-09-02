@@ -6,6 +6,7 @@
 	import ChatPanel from '$lib/components/chat/ChatPanel.svelte';
 	import { isDropUci } from '$lib/components/board/pockets';
 	import { gameChannel, getSocket, type JoinResponse } from '$lib/client/socket';
+	import { terminationLabel } from '$lib/client/terminations';
 	import type { DestMap } from '$lib/server/chess/types';
 
 	const gameId = $derived(page.params.id as string);
@@ -45,9 +46,12 @@
 	let over = $state<{ result: string; termination: string } | null>(null);
 	let rematchReadyTo = $state<string | null>(null);
 	let loadError = $state(false);
+	/** Transient, non-blocking notice when a move fails or times out. */
+	let moveError = $state<string | null>(null);
 
 	let socketUnsub: Array<() => void> = [];
 	let ticker: ReturnType<typeof setInterval> | null = null;
+	let moveErrorTimer: ReturnType<typeof setTimeout> | null = null;
 
 	const yourColor = $derived(info?.yourColor ?? null);
 	const isSpectator = $derived(!yourColor);
@@ -79,26 +83,6 @@
 		const m = Math.floor(total / 60);
 		const s = total % 60;
 		return `${m}:${String(s).padStart(2, '0')}`;
-	}
-
-	function terminationText(t: string): string {
-		return (
-			{
-				checkmate: 'Checkmate',
-				stalemate: 'Stalemate',
-				resignation: 'Resignation',
-				timeout: 'Flag fell',
-				agreement: 'Draw agreed',
-				repetition: 'Threefold repetition',
-				'fifty-moves': 'Fifty-move rule',
-				insufficient: 'Insufficient material',
-				kingofthehill: 'King reached the hill',
-				threecheck: 'Third check given',
-				'atomic-king-death': 'King exploded',
-				'horde-wiped': 'Horde destroyed',
-				'racingkings-finish': 'Race finished'
-			}[t] ?? t
-		);
 	}
 
 	async function applyServerMove(payload: Record<string, unknown>): Promise<void> {
@@ -137,29 +121,25 @@
 		return null;
 	}
 
+	/** Apply an authoritative join payload; used on load and after every reconnect. */
+	function hydrateFromJoin(join: JoinResponse): boolean {
+		if (!join.ok || !join.game || !join.state) return false;
+		info = join.game as unknown as GameInfo;
+		if (info.status === 'finished' && info.result) {
+			over = { result: String(info.result), termination: String(info.termination ?? '') };
+		}
+		xfen = String(join.state.xfen);
+		dests = (join.state.dests as DestMap) ?? {};
+		pockets = (join.state.pockets as Record<string, number> | undefined) ?? null;
+		sanMoves = join.sanMoves ?? [];
+		clock = join.clock ?? null;
+		clockAt = Date.now();
+		deadline = join.deadline ?? null;
+		return true;
+	}
+
 	onMount(() => {
 		void (async () => {
-			const join = await Promise.race([
-				gameChannel.join(gameId),
-				new Promise<JoinResponse>((r) => setTimeout(() => r({ ok: false }), 5000))
-			]);
-			if (!join.ok || !join.game || !join.state) {
-				loadError = true;
-				return;
-			}
-			info = join.game as unknown as GameInfo;
-			if (info.status === 'finished' && info.result) {
-				over = { result: String(info.result), termination: String(info.termination ?? '') };
-			}
-			xfen = String(join.state.xfen);
-			dests = (join.state.dests as DestMap) ?? {};
-			pockets = (join.state.pockets as Record<string, number> | undefined) ?? null;
-			sanMoves = join.sanMoves ?? [];
-			clock = join.clock ?? null;
-			clockAt = Date.now();
-			deadline = join.deadline ?? null;
-			startTicker();
-
 			const socket = await getSocket();
 			const onMoved = (p: unknown) => void applyServerMove(p as Record<string, unknown>);
 			socket.on('game:moved', onMoved);
@@ -188,16 +168,65 @@
 				() => socket.off('game:draw-declined'),
 				() => socket.off('game:rematch-ready')
 			];
+
+			// Room membership dies with the server-side socket, so every connect
+			// event (first one included) re-joins and refreshes from the
+			// authoritative payload. The in-flight guard collapses the cold-load
+			// overlap between the kick-off below and the first 'connect'.
+			let hydrated = false;
+			let syncing = false;
+			const syncFromServer = async (): Promise<void> => {
+				if (syncing) return;
+				syncing = true;
+				try {
+					const joined = hydrateFromJoin(await gameChannel.join(gameId));
+					if (joined) {
+						hydrated = true;
+						loadError = false;
+						startTicker();
+					} else if (!hydrated) {
+						loadError = true;
+					}
+				} catch {
+					if (!hydrated) loadError = true;
+				} finally {
+					syncing = false;
+				}
+			};
+			const onConnect = (): void => {
+				void syncFromServer();
+			};
+			socket.on('connect', onConnect);
+			socketUnsub.push(() => socket.off('connect', onConnect));
+
+			void syncFromServer();
 		})();
 	});
 
 	onDestroy(() => {
 		for (const off of socketUnsub) off();
 		if (ticker) clearInterval(ticker);
+		if (moveErrorTimer) clearTimeout(moveErrorTimer);
 	});
 
+	function showMoveError(message: string): void {
+		moveError = message;
+		if (moveErrorTimer) clearTimeout(moveErrorTimer);
+		moveErrorTimer = setTimeout(() => (moveError = null), 4000);
+	}
+
 	async function onMove(uci: string): Promise<void> {
-		await gameChannel.move(gameId, uci);
+		moveError = null;
+		try {
+			const res = await gameChannel.move(gameId, uci);
+			if (!res.ok) {
+				showMoveError(
+					res.reason === 'not-your-turn' ? 'It is not your turn.' : 'The server rejected that move.'
+				);
+			}
+		} catch {
+			showMoveError('That move did not reach the server. You can try again.');
+		}
 	}
 
 	const announcement = $derived.by(() => {
@@ -260,6 +289,10 @@
 					Move due by {new Date(deadline).toLocaleString()}
 				</p>
 			{/if}
+
+			{#if moveError}
+				<p class="move-error" role="alert">{moveError}</p>
+			{/if}
 		</div>
 
 		<aside class="rail" aria-label="Moves and controls">
@@ -289,7 +322,7 @@
 								? 'Draw'
 								: `${over.result === 'white' ? 'White' : 'Black'} wins`}
 						</p>
-						<p class="term">{terminationText(String(over.termination))}</p>
+						<p class="term">{terminationLabel(String(over.termination))}</p>
 						{#if rematchReadyTo}
 							<a href={resolve(`/game/${rematchReadyTo}`)} class="primary button-link"
 								>Go to rematch</a
@@ -338,6 +371,11 @@
 	}
 	.board-column {
 		align-self: start;
+	}
+	.move-error {
+		margin: 0.25rem 0;
+		color: var(--flag-red);
+		font-size: 13px;
 	}
 	.nameplate {
 		display: flex;
