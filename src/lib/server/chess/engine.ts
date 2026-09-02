@@ -75,7 +75,7 @@ function destsFor(pos: Position, variant: VariantId): DestMap {
 	const out: DestMap = {};
 	for (const [from, tos] of map.entries()) out[from] = [...tos];
 	if (pos.rules === 'crazyhouse' && pos.dropDests) {
-		const dropSquares = [...pos.dropDests()];
+		const dropSquares = [...pos.dropDests(pos.ctx())];
 		for (const [role, letter] of Object.entries(ROLE_LETTERS)) {
 			if (role === 'king') continue;
 			let squares = dropSquares;
@@ -140,7 +140,7 @@ export function applyMove(variant: VariantId, xfen: string, uci: string): ApplyM
 function isLegalByName(pos: Position, variant: VariantId, move: Move): boolean {
 	if (isDrop(move)) {
 		if (pos.rules !== 'crazyhouse') return false;
-		let ok = pos.dropDests().has(move.to);
+		let ok = pos.dropDests(pos.ctx()).has(move.to);
 		if (ok && move.role === 'pawn') ok = move.to >= 8 && move.to <= 55;
 		return ok;
 	}

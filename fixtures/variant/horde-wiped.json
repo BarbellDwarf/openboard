@@ -1,0 +1,13 @@
+{
+	"name": "horde: wiping the last horde piece wins for the army side",
+	"variant": "horde",
+	"xfen": "8/8/8/1k6/2q5/8/P7/8 b - - 0 1",
+	"uci": "c4a2",
+	"expect": {
+		"ok": true,
+		"finished": {
+			"result": "black",
+			"termination": "horde-wiped"
+		}
+	}
+}

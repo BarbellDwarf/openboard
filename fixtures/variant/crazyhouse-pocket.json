@@ -1,0 +1,13 @@
+{
+	"name": "crazyhouse capture fills the capturing side's pocket",
+	"variant": "crazyhouse",
+	"xfen": "rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3",
+	"uci": "f3e5",
+	"expect": {
+		"ok": true,
+		"pocketAfter": {
+			"wp": 1
+		},
+		"sanPrefix": "Nxe5"
+	}
+}
