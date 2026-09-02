@@ -3,6 +3,12 @@
 	import { resolve } from '$app/paths';
 
 	import Board from '$lib/components/board/Board.svelte';
+	import type { PageData } from './$types';
+
+	let { data }: { data: PageData } = $props();
+
+	let setupBannerDismissed = $state(false);
+	const showSetupBanner = $derived(!!data.needsSetup && !data.user && !setupBannerDismissed);
 
 	const START_XFEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
@@ -57,6 +63,21 @@
 
 <svelte:head><title>OpenBoard - play chess your way</title></svelte:head>
 
+{#if showSetupBanner}
+	<div class="setup-banner" role="note">
+		<p>
+			This server has no administrator yet. <a href={resolve('/setup')}>Finish setup</a> to create one.
+		</p>
+		<button
+			type="button"
+			aria-label="Dismiss setup reminder"
+			onclick={() => (setupBannerDismissed = true)}
+		>
+			Dismiss
+		</button>
+	</div>
+{/if}
+
 <section class="hero">
 	<div class="hero-board" style="--board-size: 100%;">
 		{#if demo.xfen}
@@ -98,6 +119,40 @@
 </section>
 
 <style>
+	.setup-banner {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 1rem;
+		max-width: 1000px;
+		margin: 1rem auto 0;
+		padding: 0.55rem 1rem;
+		background: var(--baize-raised);
+		border: 1px solid var(--walnut);
+		border-radius: 8px;
+	}
+	.setup-banner p {
+		margin: 0;
+		color: var(--parchment);
+		font-size: 14px;
+	}
+	.setup-banner a {
+		color: var(--amber);
+		font-weight: 600;
+	}
+	.setup-banner button {
+		background: transparent;
+		border: 1px solid var(--walnut);
+		border-radius: 6px;
+		color: var(--parchment);
+		padding: 0.25rem 0.6rem;
+		cursor: pointer;
+		font-size: 12px;
+	}
+	.setup-banner button:hover {
+		border-color: var(--amber);
+		color: var(--amber);
+	}
 	.hero {
 		display: grid;
 		grid-template-columns: minmax(280px, 480px) 1fr;

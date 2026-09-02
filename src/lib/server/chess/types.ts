@@ -35,7 +35,8 @@ export type Termination =
 	| 'threecheck'
 	| 'atomic-king-death'
 	| 'horde-wiped'
-	| 'racingkings-finish';
+	| 'racingkings-finish'
+	| 'admin-closed';
 
 export interface TimeControl {
 	initialMs: number | null;

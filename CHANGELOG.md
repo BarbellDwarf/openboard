@@ -11,6 +11,7 @@ Initial release.
 - Glicko-2 ratings per variant per speed class, with public leaderboards.
 - Challenges and a quick-pairing pool.
 - Per-game chat.
+- First-run setup at `/setup` that creates the administrator account, plus basic moderation: admins close games, delete any chat message, and list members.
 - Board themes and three piece sets including original wizard-themed (Arcane) and dragon-themed (Draconic) artwork.
 - In-app notifications and web push.
 - Installable progressive web app with offline shell.
