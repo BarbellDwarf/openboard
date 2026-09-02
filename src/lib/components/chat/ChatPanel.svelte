@@ -78,7 +78,11 @@
 		min-height: 90px;
 		overflow-y: auto;
 		display: flex;
-		flex-direction: column-reverse;
+		/* Normal order only: messages render first-to-last, newest at the
+		   bottom, matching scrollDown()'s scrollTop = scrollHeight. The old
+		   column-reverse put the newest line at the visual top while that
+		   assignment scrolled to the content start (the oldest message). */
+		flex-direction: column;
 		font-size: 13px;
 		color: var(--parchment);
 	}
